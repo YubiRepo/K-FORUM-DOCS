@@ -247,8 +247,8 @@ Memverifikasi OTP yang dimasukkan oleh pengguna.
 
 ---
 
-### 8. Forgot Password
-Mengajukan permintaan reset password (mengirimkan link/token ke email).
+### 8. Forgot Password (Lupa Password - Kirim OTP/Link)
+Mengajukan permintaan reset password jika pengguna lupa kata sandi mereka. Backend akan mengirimkan kode OTP atau link ke email pengguna.
 
 - **URL**: `POST /api/v1/mobile/auth/password/forgot`
 - **Autentikasi**: Tidak
@@ -261,14 +261,21 @@ Mengajukan permintaan reset password (mengirimkan link/token ke email).
 - **Response (Success 200)**:
   ```json
   {
-    "message": "Link reset password telah dikirim ke email Anda"
+    "message": "Link/Kode OTP reset password telah dikirim ke email Anda"
   }
   ```
 
 ---
 
-### 9. Reset Password
-Mengubah password lama ke password baru menggunakan token verifikasi.
+### 9. Reset Password (Mengubah Password via OTP/Token)
+Mengubah password lama ke password baru menggunakan kode verifikasi/token yang valid.
+
+> [!NOTE]
+> **Alur Forgot & Reset Password (User Belum Login)**:
+> 1. User memanggil `POST /password/forgot` ➡️ Backend mengirim OTP ke email.
+> 2. User memverifikasi OTP dengan `POST /otp/verify` ➡️ Backend memvalidasi dan mengembalikan `token` (token sementara JWT).
+> 3. User memanggil `POST /password/reset` dengan mengirimkan `email`, `token` (dari langkah 2), dan `password` baru. 
+> *Catatan*: Jika backend memilih untuk tidak mengembalikan token pada langkah 2, backend dapat mengizinkan `token` pada langkah 3 diisi langsung dengan kode OTP yang dimasukkan user.
 
 - **URL**: `POST /api/v1/mobile/auth/password/reset`
 - **Autentikasi**: Tidak
@@ -313,3 +320,25 @@ Mengambil informasi profil dari pengguna yang sedang login saat ini.
     }
   }
   ```
+
+---
+
+### 11. Change Password (Ubah Password dari Pengaturan)
+Mengubah password untuk pengguna yang sedang aktif/login. Pengguna harus memasukkan password lama untuk verifikasi sebelum menggantinya dengan password baru.
+
+- **URL**: `POST /api/v1/mobile/auth/password/change`
+- **Autentikasi**: Ya (`Bearer <access_token>`)
+- **Request Body**:
+  ```json
+  {
+    "old_password": "currentpassword123",
+    "password": "newpassword123"
+  }
+  ```
+- **Response (Success 200)**:
+  ```json
+  {
+    "message": "Password changed successfully"
+  }
+  ```
+
