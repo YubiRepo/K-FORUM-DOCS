@@ -8,6 +8,8 @@ Dokumentasi ini dibuat untuk kebutuhan tim Backend agar skema request/response A
 - **Headers Global**:
   - `Content-Type: application/json`
   - `Accept: application/json`
+  - `Accept-Language: <lang_code>` (Mengirimkan kode bahasa aktif, contoh: `ko`, `id`, `en`. Default: `ko`)
+  - `X-Locale: <lang_code>` (Mengirimkan kode bahasa aktif, contoh: `ko`, `id`, `en`. Default: `ko`)
   - `Authorization: Bearer <access_token>` (Hanya untuk endpoint yang membutuhkan autentikasi)
 
 ---
