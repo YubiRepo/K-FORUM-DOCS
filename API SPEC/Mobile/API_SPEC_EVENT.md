@@ -14,6 +14,43 @@ Dokumentasi ini dibuat untuk kebutuhan tim Backend agar skema request/response A
 
 ---
 
+## Status Implementasi & Clarifications
+
+### ✅ FINAL - Ready to Implement
+Bagian-bagian berikut sudah final dan siap untuk diimplementasikan:
+- **Event data model** (fields, structure)
+- **Read-only endpoints** (GET list, detail, search, categories, featured, upcoming)
+- **Filtering & sorting** (semua query parameters)
+- **Pagination** (structure & logic)
+
+### ⏳ BELUM FINAL - Pending Decision
+Bagian-bagian berikut masih dalam diskusi dan belum final:
+- **Event creation permissions** — Siapa yang bisa create event? (Admin only vs Admin + Member Pro)
+- **RSVP/Registration feature** — User bisa register ke event atau tidak? (Currently di section "Future Feature" sebagai placeholder)
+- **Add to Calendar feature** — Apakah perlu endpoint untuk generate .ics file atau calendar deep link?
+- **Notification triggers** — Kapan user dapat notif event? Siapa yang dapat notif?
+
+> [!NOTE]
+> Backend team disarankan untuk **prioritize implementasi bagian FINAL** terlebih dahulu. Untuk bagian yang BELUM FINAL, silakan menunggu keputusan bisnis atau diskusi lebih lanjut dengan product team.
+
+---
+
+## Region Functionality Clarification
+
+**Region di Event berfungsi sebagai organizing label dan filter, BUKAN access restriction.**
+
+- ✅ **Semua user bisa melihat semua event** dari region manapun
+- ✅ Region digunakan untuk **filtering** (contoh: "Tampilkan event dari KAI Jakarta saja")
+- ✅ Region menunjukkan **organizing body** (event dibuat oleh KAI Pusat, KAI Jakarta, dll)
+- ❌ **TIDAK ada access restriction** berdasarkan region membership user
+
+**Contoh Use Case:**
+- User yang member KAI Jakarta **tetap bisa lihat** event dari KAI Bandung
+- User bisa filter event berdasarkan region untuk cari event lokal di wilayah mereka
+- Analytics: Track berapa banyak event per region, engagement per region, dll
+
+---
+
 ## Model Data Utama
 
 ### 1. Event Object (Common Response Schema)
@@ -545,12 +582,21 @@ Endpoint khusus untuk search dengan support advanced query.
 
 ---
 
-## Future Feature: RSVP / Registration
+## Future Features — BELUM FINAL ⚠️
 
-> [!NOTE]
-> **Placeholder untuk future implementation**. Endpoint-endpoint berikut belum final dan masih dalam perencanaan.
+> [!WARNING]
+> **PERHATIAN untuk Backend Team**: Section ini berisi **placeholder untuk fitur yang masih dalam diskusi**. Endpoint-endpoint di bawah ini **BELUM FINAL** dan **JANGAN diimplementasikan** sebelum ada konfirmasi dari product team.
+> 
+> **Status Diskusi:**
+> - ❓ RSVP/Registration feature — Masih dipertimbangkan apakah user perlu register ke event atau purely informational
+> - ❓ Add to Calendar feature — Masih dipertimbangkan implementasinya (.ics file download vs deep link)
+> - ❓ Notification system — Trigger dan logic notifikasi masih dalam diskusi
+> 
+> Silakan fokus ke **read-only endpoints** (list, detail, search, filter) yang sudah FINAL terlebih dahulu.
 
-### 7. Register to Event (Future)
+---
+
+### 7. Register to Event (Future - BELUM FINAL)
 Mendaftarkan user ke sebuah event.
 
 - **URL**: `POST /api/v1/mobile/events/:id/register`
@@ -589,7 +635,7 @@ Membatalkan pendaftaran user dari sebuah event.
   }
   ```
 
-### 9. Get My Registered Events (Future)
+### 9. Get My Registered Events (Future - BELUM FINAL)
 Mengambil daftar event yang sudah didaftarkan oleh user.
 
 - **URL**: `GET /api/v1/mobile/events/my-registrations`
@@ -629,6 +675,40 @@ Mengambil daftar event yang sudah didaftarkan oleh user.
       "items_per_page": 10,
       "has_next": false,
       "has_prev": false
+    }
+  }
+  ```
+
+---
+
+### 10. Add to Calendar (Future - BELUM FINAL)
+Generate calendar file (.ics) atau deep link untuk menambahkan event ke Google Calendar / iOS Calendar.
+
+> [!NOTE]
+> **Opsi Implementasi yang Perlu Diputuskan:**
+> 1. **Download .ics file** — Backend generate .ics file, user download & import ke calendar app
+> 2. **Deep link** — Backend return URL scheme untuk Google Calendar / iOS Calendar
+> 3. **Hybrid** — Support both methods, client pilih berdasarkan platform
+
+#### Option A: Generate .ics File
+- **URL**: `GET /api/v1/mobile/events/:id/calendar.ics`
+- **Autentikasi**: Optional
+- **Response**: `.ics` file dengan `Content-Type: text/calendar`
+
+#### Option B: Deep Link
+- **URL**: `GET /api/v1/mobile/events/:id/calendar-link`
+- **Autentikasi**: Optional
+- **Query Parameters**:
+  ```
+  provider : string (enum: 'google', 'apple', 'outlook')
+  ```
+- **Response (Success 200)**:
+  ```json
+  {
+    "data": {
+      "provider": "google",
+      "deep_link": "https://calendar.google.com/calendar/render?action=TEMPLATE&text=Korean+Cultural+Festival+2026&dates=20260615T100000Z/20260615T180000Z&details=...",
+      "expires_at": "2026-05-22T10:30:00.000Z"
     }
   }
   ```
