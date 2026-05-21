@@ -17,7 +17,7 @@ Dokumentasi ini dibuat untuk kebutuhan tim Backend agar skema request/response A
 ## Model Data Utama
 
 ### 1. User Profile Object (Common Response Schema)
-Setiap kali endpoint mengembalikan data Profile lengkap, strukturnya harus berupa format berikut di dalam field `data`:
+Setiap kali endpoint mengembalikan data Profile dasar, strukturnya harus berupa format berikut di dalam field `data`:
 
 ```json
 {
@@ -49,6 +49,9 @@ Setiap kali endpoint mengembalikan data Profile lengkap, strukturnya harus berup
   "last_login": "string (nullable, ISO 8601 UTC format)"
 }
 ```
+
+> [!NOTE]
+> **Catatan**: Untuk data regions, communities, dan subscription, lihat object models di bawah ini.
 
 ### 2. Region Membership Object
 Struktur untuk region yang diikuti user:
@@ -117,12 +120,75 @@ Frontend menangani 2 skema error utama dari backend:
 }
 ```
 
+## API Strategy: Endpoint Separation
+
+Profile & Membership modul menggunakan **separated endpoint strategy** untuk optimal performance dan mobile-friendly design:
+
+### Data Fetching Pattern
+
+```
+Profile Data Structure (Separate Endpoints):
+
+GET /api/v1/mobile/profile/me
+└─ Personal Profile (lean, ~2-3KB)
+   → id, name, email, avatar, phone, birth_date, gender, bio, address, etc
+
+GET /api/v1/mobile/profile/memberships/regions
+└─ Region List (paginated)
+   → regions joined by user
+
+GET /api/v1/mobile/profile/memberships/communities
+└─ Community List (paginated)
+   → communities joined by user + community role
+
+GET /api/v1/mobile/profile/subscription
+└─ Subscription Detail
+   → plan info, pricing, expiry, benefits, etc
+```
+
+### Client Implementation Example
+
+**Scenario 1: Load Profile Page Only**
+```javascript
+// Hanya panggil /me — cepat & hemat bandwidth
+const profile = await GET('/api/v1/mobile/profile/me');
+```
+
+**Scenario 2: Load Profile + Memberships**
+```javascript
+// Parallel fetch untuk lebih cepat
+const [profile, regions, communities] = await Promise.all([
+  GET('/api/v1/mobile/profile/me'),
+  GET('/api/v1/mobile/profile/memberships/regions'),
+  GET('/api/v1/mobile/profile/memberships/communities')
+]);
+```
+
+**Scenario 3: Load Profile + Subscription**
+```javascript
+// Fetch subscription untuk payment/upgrade page
+const [profile, subscription] = await Promise.all([
+  GET('/api/v1/mobile/profile/me'),
+  GET('/api/v1/mobile/profile/subscription')
+]);
+```
+
+### Benefits
+
+- ✅ **Performance**: Client hanya load data yang dibutuhkan
+- ✅ **Bandwidth**: Response size kecil → cepat di mobile networks
+- ✅ **Scalability**: Nggak ada timeout meski user punya 1000 communities
+- ✅ **Caching**: Setiap data bisa di-cache independently
+- ✅ **Flexibility**: Nggak perlu fetch semua data untuk simple profile view
+
 ---
 
 ## Daftar Endpoint
 
-### 1. Get Profile (Fetch Full Profile Data)
-Mengambil informasi profile lengkap pengguna yang sedang login beserta memberships dan subscription.
+
+
+### 1. Get Profile (Fetch Basic Profile Data)
+Mengambil informasi profile dasar pengguna yang sedang login (personal info only, tanpa memberships & subscription).
 
 - **URL**: `GET /api/v1/mobile/profile/me`
 - **Autentikasi**: Ya (`Bearer <access_token>`)
@@ -156,55 +222,13 @@ Mengambil informasi profile lengkap pengguna yang sedang login beserta membershi
       "is_verified": true,
       "created_at": "2025-01-15T10:30:00.000Z",
       "updated_at": "2026-05-20T14:20:00.000Z",
-      "last_login": "2026-05-20T08:45:00.000Z",
-      "regions": [
-        {
-          "id": "reg_001",
-          "name": "KAI Pusat",
-          "code": "central",
-          "joined_at": "2025-01-15T10:30:00.000Z"
-        },
-        {
-          "id": "reg_002",
-          "name": "KAI Jakarta",
-          "code": "jakarta",
-          "joined_at": "2025-06-10T14:20:00.000Z"
-        }
-      ],
-      "communities": [
-        {
-          "id": "com_001",
-          "name": "K-Pop Lovers",
-          "description": "Komunitas penggemar musik Korea",
-          "avatar": "https://example.com/kpop-avatar.jpg",
-          "community_role": "member",
-          "joined_at": "2025-02-01T09:00:00.000Z"
-        },
-        {
-          "id": "com_002",
-          "name": "Futsal Reguler",
-          "description": "Komunitas olahraga futsal",
-          "avatar": "https://example.com/futsal-avatar.jpg",
-          "community_role": "leader",
-          "joined_at": "2025-03-10T15:30:00.000Z"
-        }
-      ],
-      "subscription": {
-        "plan": "pro",
-        "plan_id": "plan_pro_001",
-        "status": "active",
-        "start_date": "2026-04-20T00:00:00.000Z",
-        "expiry_date": "2026-10-20T23:59:59.000Z",
-        "auto_renew": true,
-        "price": 99000,
-        "currency": "IDR",
-        "billing_cycle": "monthly",
-        "next_billing_date": "2026-06-20T00:00:00.000Z",
-        "remaining_days": 152
-      }
+      "last_login": "2026-05-20T08:45:00.000Z"
     }
   }
   ```
+
+> [!NOTE]
+> **Catatan**: Response ini hanya berisi data personal profile. Untuk fetch region memberships, community memberships, dan subscription details, gunakan endpoint terpisah: `/memberships/regions`, `/memberships/communities`, dan `/subscription`
 
 ---
 
@@ -615,8 +639,15 @@ Membatalkan permintaan penghapusan akun jika masih dalam periode 30 hari.
 
 4. **Avatar CDN**: Avatar harus di-serve dari CDN untuk performa optimal. Include thumbnail version untuk list views.
 
-5. **Membership Pagination**: Untuk komunitas/region dengan banyak anggota, gunakan pagination untuk menghindari response yang terlalu besar.
+5. **Membership Pagination**: Untuk komunitas/region dengan banyak anggota, gunakan pagination untuk menghindari response yang terlalu besar. Default 10 items per page, max 50.
 
 6. **Timestamp Format**: Semua timestamp harus dalam format ISO 8601 UTC (contoh: `2026-05-20T14:20:00.000Z`).
 
 7. **Language Support**: Gunakan `Accept-Language` header untuk mengirimkan error messages & benefits dalam bahasa user.
+
+8. **Parallel Requests**: Client boleh parallel fetch `/me`, `/memberships/*`, dan `/subscription` untuk faster load time. Gunakan Promise.all() atau equivalent async pattern.
+
+9. **Caching Strategy**: 
+   - `/profile/me` → Cache 5-10 menit (atau sampai user update)
+   - `/memberships/*` → Cache 15-30 menit
+   - `/subscription` → Cache 15 menit (critical data, check frequently untuk detect expiry)
