@@ -22,7 +22,7 @@ Setiap kali endpoint mengembalikan data User, strukturnya harus berupa format be
 ```json
 {
   "id": "string",
-  "fullanem": "string",
+  "fullname": "string",
   "email": "string",
   "username": "string",
   "avatar": "string (nullable / URL)",
@@ -80,7 +80,7 @@ Melakukan autentikasi menggunakan email dan password.
     "refresh_token": "refresh_token_jwt_string",
     "data": {
       "id": "usr_90210",
-      "name": "Minji Park",
+      "fullname": "Minji Park",
       "email": "user@example.com",
       "username": "minjipark",
       "avatar": "https://example.com/avatar.jpg",
