@@ -22,7 +22,7 @@ Setiap kali endpoint mengembalikan data User, strukturnya harus berupa format be
 ```json
 {
   "id": "string",
-  "name": "string",
+  "fullanem": "string",
   "email": "string",
   "username": "string",
   "avatar": "string (nullable / URL)",
@@ -69,7 +69,7 @@ Melakukan autentikasi menggunakan email dan password.
 - **Request Body**:
   ```json
   {
-    "email": "user@example.com",
+    "identifier": "user@example.com",
     "password": "userpassword"
   }
   ```
@@ -141,7 +141,8 @@ Melakukan registrasi akun baru dengan kredensial biasa.
 - **Request Body**:
   ```json
   {
-    "name": "Minji Park",
+    "username": "Minji Park",
+    "fullname": "Minji Park", // optional
     "email": "minji-park@mail.com",
     "phone": "08123456789",
     "password": "userpassword"
@@ -153,7 +154,7 @@ Melakukan registrasi akun baru dengan kredensial biasa.
     "message": "Registration successful. Please verify OTP.",
     "data": {
       "id": "usr_90212",
-      "name": "Minji Park",
+      "fullname": "Minji Park",
       "email": "minji-park@mail.com",
       "username": "minjipark123",
       "avatar": null,
@@ -233,7 +234,7 @@ Memverifikasi OTP yang dimasukkan oleh pengguna.
 - **Request Body**:
   ```json
   {
-    "email": "user@example.com",
+    "identifier": "user@example.com",
     "otp": "1234"
   }
   ```
