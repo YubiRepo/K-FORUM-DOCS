@@ -62,7 +62,7 @@ Jika terdapat kesalahan input form, backend disarankan mengembalikan objek `erro
 ## Daftar Endpoint
 
 ### 1. Login (Email & Password)
-Melakukan autentikasi menggunakan email dan password.
+Melakukan autentikasi menggunakan email /username dan password.
 
 - **URL**: `POST /api/v1/mobile/auth/login`
 - **Autentikasi**: Tidak
