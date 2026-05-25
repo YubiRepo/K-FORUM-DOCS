@@ -6,7 +6,7 @@ Dokumentasi API untuk manajemen role dan permission di dashboard backoffice. End
 
 ## Informasi Umum
 
-- **Base URL Prefix**: `/api/v1/backoffice/role-permission`
+- **Base URL Prefix**: `/api/v1/web/role-permission`
 - **Headers Global**:
   - `Content-Type: application/json`
   - `Accept: application/json`
@@ -114,7 +114,7 @@ Beberapa endpoint return object dengan detail nested (role details, permission d
 
 Ambil semua permission yang ada di sistem. Cocok untuk pre-load/cache di frontend.
 
-- **URL**: `GET /api/v1/backoffice/role-permission/permissions`
+- **URL**: `GET /api/v1/web/role-permission/permissions`
 - **Autentikasi**: Yes (Bearer token)
 - **Authorization**: usergod only
 - **Query Parameters**:
@@ -165,7 +165,7 @@ Ambil semua permission yang ada di sistem. Cocok untuk pre-load/cache di fronten
 
 Ambil detail satu permission.
 
-- **URL**: `GET /api/v1/backoffice/role-permission/permissions/{permission_id}`
+- **URL**: `GET /api/v1/web/role-permission/permissions/{permission_id}`
 - **Autentikasi**: Yes
 - **Authorization**: usergod only
 - **Response (Success 200)**:
@@ -191,7 +191,7 @@ Ambil detail satu permission.
 
 Buat permission baru. **Only usergod can do this.**
 
-- **URL**: `POST /api/v1/backoffice/role-permission/permissions`
+- **URL**: `POST /api/v1/web/role-permission/permissions`
 - **Autentikasi**: Yes
 - **Authorization**: usergod only
 - **Request Body**:
@@ -234,7 +234,7 @@ Buat permission baru. **Only usergod can do this.**
 
 Update permission yang sudah ada. **Only usergod can do this.**
 
-- **URL**: `PUT /api/v1/backoffice/role-permission/permissions/{permission_id}`
+- **URL**: `PUT /api/v1/web/role-permission/permissions/{permission_id}`
 - **Autentikasi**: Yes
 - **Authorization**: usergod only
 - **Request Body**:
@@ -268,7 +268,7 @@ Update permission yang sudah ada. **Only usergod can do this.**
 
 Hapus permission (soft delete atau restrict based on usage). **Only usergod.**
 
-- **URL**: `DELETE /api/v1/backoffice/role-permission/permissions/{permission_id}`
+- **URL**: `DELETE /api/v1/web/role-permission/permissions/{permission_id}`
 - **Autentikasi**: Yes
 - **Authorization**: usergod only
 - **Response (Success 200)**:
@@ -292,7 +292,7 @@ Hapus permission (soft delete atau restrict based on usage). **Only usergod.**
 
 Ambil semua role di sistem.
 
-- **URL**: `GET /api/v1/backoffice/role-permission/roles`
+- **URL**: `GET /api/v1/web/role-permission/roles`
 - **Autentikasi**: Yes
 - **Authorization**: usergod or superadmin
 - **Query Parameters**:
@@ -340,7 +340,7 @@ Ambil semua role di sistem.
 
 Ambil detail satu role + permission yang di-assign.
 
-- **URL**: `GET /api/v1/backoffice/role-permission/roles/{role_id}`
+- **URL**: `GET /api/v1/web/role-permission/roles/{role_id}`
 - **Autentikasi**: Yes
 - **Authorization**: usergod or superadmin
 - **Response (Success 200)**:
@@ -383,7 +383,7 @@ Ambil detail satu role + permission yang di-assign.
 
 Buat role baru (system atau community). **Only usergod.**
 
-- **URL**: `POST /api/v1/backoffice/role-permission/roles`
+- **URL**: `POST /api/v1/web/role-permission/roles`
 - **Autentikasi**: Yes
 - **Authorization**: usergod only
 - **Request Body**:
@@ -418,7 +418,7 @@ Buat role baru (system atau community). **Only usergod.**
 
 Update role information. **Only usergod.**
 
-- **URL**: `PUT /api/v1/backoffice/role-permission/roles/{role_id}`
+- **URL**: `PUT /api/v1/web/role-permission/roles/{role_id}`
 - **Autentikasi**: Yes
 - **Authorization**: usergod only
 - **Request Body**:
@@ -453,7 +453,7 @@ Update role information. **Only usergod.**
 
 Ambil semua permission yang di-assign ke satu system role.
 
-- **URL**: `GET /api/v1/backoffice/role-permission/system-role-permissions`
+- **URL**: `GET /api/v1/web/role-permission/system-role-permissions`
 - **Autentikasi**: Yes
 - **Authorization**: usergod or superadmin
 - **Query Parameters**:
@@ -502,7 +502,7 @@ Ambil semua permission yang di-assign ke satu system role.
 
 Assign satu permission ke satu system role.
 
-- **URL**: `POST /api/v1/backoffice/role-permission/system-role-permissions`
+- **URL**: `POST /api/v1/web/role-permission/system-role-permissions`
 - **Autentikasi**: Yes
 - **Authorization**: superadmin (untuk superadmin/admin role), usergod (untuk semua role)
 - **Request Body**:
@@ -552,7 +552,7 @@ Assign satu permission ke satu system role.
 
 Hapus assignment permission dari system role.
 
-- **URL**: `DELETE /api/v1/backoffice/role-permission/system-role-permissions/{assignment_id}`
+- **URL**: `DELETE /api/v1/web/role-permission/system-role-permissions/{assignment_id}`
 - **Autentikasi**: Yes
 - **Authorization**: superadmin or usergod
 - **Response (Success 200)**:
@@ -568,7 +568,7 @@ Hapus assignment permission dari system role.
 
 Assign multiple permissions sekaligus ke satu role (convenience endpoint).
 
-- **URL**: `POST /api/v1/backoffice/role-permission/system-role-permissions/bulk-assign`
+- **URL**: `POST /api/v1/web/role-permission/system-role-permissions/bulk-assign`
 - **Autentikasi**: Yes
 - **Authorization**: superadmin or usergod
 - **Request Body**:
@@ -618,7 +618,7 @@ Assign multiple permissions sekaligus ke satu role (convenience endpoint).
 
 Ambil semua role assignment untuk satu user atau filter user tertentu.
 
-- **URL**: `GET /api/v1/backoffice/role-permission/user-roles`
+- **URL**: `GET /api/v1/web/role-permission/user-roles`
 - **Autentikasi**: Yes
 - **Authorization**: usergod or superadmin or admin (filter own region only)
 - **Query Parameters**:
@@ -672,7 +672,7 @@ Ambil semua role assignment untuk satu user atau filter user tertentu.
 
 Ambil detail satu user role assignment.
 
-- **URL**: `GET /api/v1/backoffice/role-permission/user-roles/{user_role_id}`
+- **URL**: `GET /api/v1/web/role-permission/user-roles/{user_role_id}`
 - **Autentikasi**: Yes
 - **Authorization**: usergod or superadmin or admin (own region only)
 - **Response (Success 200)**:
@@ -729,7 +729,7 @@ Ambil detail satu user role assignment.
 
 Assign role ke user dalam scope tertentu.
 
-- **URL**: `POST /api/v1/backoffice/role-permission/user-roles`
+- **URL**: `POST /api/v1/web/role-permission/user-roles`
 - **Autentikasi**: Yes
 - **Authorization**: usergod (global role), superadmin (region/community), admin (own region users)
 - **Request Body**:
@@ -773,7 +773,7 @@ Assign role ke user dalam scope tertentu.
 
 Update user role (e.g., extend expiry, change scope).
 
-- **URL**: `PUT /api/v1/backoffice/role-permission/user-roles/{user_role_id}`
+- **URL**: `PUT /api/v1/web/role-permission/user-roles/{user_role_id}`
 - **Autentikasi**: Yes
 - **Authorization**: usergod or superadmin or admin (own region only)
 - **Request Body**:
@@ -806,7 +806,7 @@ Update user role (e.g., extend expiry, change scope).
 
 Deactivate role tanpa delete (soft delete dengan timestamp).
 
-- **URL**: `POST /api/v1/backoffice/role-permission/user-roles/{user_role_id}/deactivate`
+- **URL**: `POST /api/v1/web/role-permission/user-roles/{user_role_id}/deactivate`
 - **Autentikasi**: Yes
 - **Authorization**: usergod or superadmin or admin (own region only)
 - **Response (Success 200)**:
@@ -833,7 +833,7 @@ Deactivate role tanpa delete (soft delete dengan timestamp).
 
 Reactivate deactivated role.
 
-- **URL**: `POST /api/v1/backoffice/role-permission/user-roles/{user_role_id}/reactivate`
+- **URL**: `POST /api/v1/web/role-permission/user-roles/{user_role_id}/reactivate`
 - **Autentikasi**: Yes
 - **Authorization**: usergod or superadmin or admin (own region only)
 - **Response (Success 200)**:
@@ -860,7 +860,7 @@ Reactivate deactivated role.
 
 Hapus role assignment (hard delete).
 
-- **URL**: `DELETE /api/v1/backoffice/role-permission/user-roles/{user_role_id}`
+- **URL**: `DELETE /api/v1/web/role-permission/user-roles/{user_role_id}`
 - **Autentikasi**: Yes
 - **Authorization**: usergod or superadmin
 - **Response (Success 200)**:
@@ -878,7 +878,7 @@ Hapus role assignment (hard delete).
 
 Ambil semua permission yang di-assign ke community roles dalam satu komunitas.
 
-- **URL**: `GET /api/v1/backoffice/role-permission/community-role-permissions`
+- **URL**: `GET /api/v1/web/role-permission/community-role-permissions`
 - **Autentikasi**: Yes
 - **Authorization**: usergod or superadmin or community leader
 - **Query Parameters**:
@@ -930,7 +930,7 @@ Ambil semua permission yang di-assign ke community roles dalam satu komunitas.
 
 Assign permission ke community role dalam komunitas tertentu.
 
-- **URL**: `POST /api/v1/backoffice/role-permission/community-role-permissions`
+- **URL**: `POST /api/v1/web/role-permission/community-role-permissions`
 - **Autentikasi**: Yes
 - **Authorization**: usergod or superadmin or community leader
 - **Request Body**:
@@ -978,7 +978,7 @@ Assign permission ke community role dalam komunitas tertentu.
 
 Hapus permission dari community role.
 
-- **URL**: `DELETE /api/v1/backoffice/role-permission/community-role-permissions/{assignment_id}`
+- **URL**: `DELETE /api/v1/web/role-permission/community-role-permissions/{assignment_id}`
 - **Autentikasi**: Yes
 - **Authorization**: usergod or superadmin or community leader (own community)
 - **Response (Success 200)**:
@@ -994,7 +994,7 @@ Hapus permission dari community role.
 
 Assign multiple permissions sekaligus ke community role.
 
-- **URL**: `POST /api/v1/backoffice/role-permission/community-role-permissions/bulk-assign`
+- **URL**: `POST /api/v1/web/role-permission/community-role-permissions/bulk-assign`
 - **Autentikasi**: Yes
 - **Authorization**: usergod or superadmin or community leader
 - **Request Body**:
@@ -1046,7 +1046,7 @@ Assign multiple permissions sekaligus ke community role.
 
 Ambil log semua perubahan permission & role assignment.
 
-- **URL**: `GET /api/v1/backoffice/role-permission/audit-logs`
+- **URL**: `GET /api/v1/web/role-permission/audit-logs`
 - **Autentikasi**: Yes
 - **Authorization**: usergod or superadmin
 - **Query Parameters**:
@@ -1113,15 +1113,15 @@ Semua endpoint mengikuti format error dari `API_SPEC_AUTH`:
 
 ### Common Error Codes
 
-| HTTP Code | Message | Keterangan |
-|-----------|---------|-----------|
-| 400 | Bad Request | Invalid request format |
-| 401 | Unauthorized | Token invalid/expired |
-| 403 | Forbidden | User tidak punya permission untuk aksi ini |
-| 404 | Not Found | Resource tidak ditemukan |
-| 409 | Conflict | Duplicate assignment / conflict dengan existing data |
-| 422 | Unprocessable Entity | Validation error |
-| 500 | Internal Server Error | Server error |
+| HTTP Code | Message               | Keterangan                                           |
+| --------- | --------------------- | ---------------------------------------------------- |
+| 400       | Bad Request           | Invalid request format                               |
+| 401       | Unauthorized          | Token invalid/expired                                |
+| 403       | Forbidden             | User tidak punya permission untuk aksi ini           |
+| 404       | Not Found             | Resource tidak ditemukan                             |
+| 409       | Conflict              | Duplicate assignment / conflict dengan existing data |
+| 422       | Unprocessable Entity  | Validation error                                     |
+| 500       | Internal Server Error | Server error                                         |
 
 ---
 
@@ -1132,4 +1132,3 @@ Semua endpoint mengikuti format error dari `API_SPEC_AUTH`:
 3. **Cache Invalidation**: Setiap perubahan permission/role harus invalidate cache user permission (jika di-implement).
 4. **Soft Deletes**: User role assignment menggunakan soft delete (is_active flag) bukan hard delete, kecuali ada explicit delete request dari usergod.
 5. **Scope Validation**: Saat assign role ke user, validate bahwa scope_id benar-benar ada (region exist, community exist).
-
