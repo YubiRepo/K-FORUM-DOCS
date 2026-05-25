@@ -89,28 +89,36 @@ CREATE UNIQUE INDEX idx_plans_name_unique
 
 Master list semua benefit yang bisa di-assign ke plan. Hanya bisa dibuat/diubah oleh `usergod`. Tabel ini berperan sebagai "kamus" benefit yang valid di sistem.
 
+**PENTING**: Benefit adalah fitur access yang di-gate oleh subscription plan. Approval/role-based gating adalah terpisah dan dihandle oleh **role/permission system** (lihat `ROLE_PERMISSION_DB_SCHEMA.md`).
+
 | Kolom | Tipe PostgreSQL | Constraint | Keterangan |
 |---|---|---|---|
 | `id` | `UUID` | PK, DEFAULT `gen_random_uuid()` | |
 | `key` | `VARCHAR(100)` | NOT NULL, UNIQUE | Identifier unik benefit, e.g. `post_news` |
+| `display_name` | `VARCHAR(200)` | NOT NULL | Human-readable name, e.g. "Post News Articles" |
 | `description` | `TEXT` | NULLABLE | Penjelasan benefit untuk ditampilkan di UI |
-| `approval_required` | `BOOLEAN` | NOT NULL, DEFAULT `false` | Apakah aksi ini perlu persetujuan admin |
-| `approval_role` | `VARCHAR(50)` | NULLABLE | Role yang berwenang approve, e.g. `superadmin` |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT `NOW()` | |
 
 **Predefined benefit keys** (dari API spec):
 
-| Key | Deskripsi | Approval Required | Approval Role |
-|---|---|---|---|
-| `read_content` | Baca news, event, direktori | `false` | — |
-| `join_community` | Join komunitas | `false` | — |
-| `post_community` | Post di komunitas (unlimited) | `false` | — |
-| `ask_qna` | Tanya di Q&A | `false` | — |
-| `post_news` | Post news | `true` | `superadmin` |
-| `create_community` | Buat dan manage community | `false` | — |
-| `create_store` | Buat store/merchant listing | `false` | — |
-| `create_event` | Buat event | `false` | — |
-| `view_analytics` | Lihat analytics | `false` | — |
+| Key | Display Name | Deskripsi |
+|---|---|---|
+| `read_content` | Read content | Baca news, event, direktori |
+| `join_community` | Join community | Join komunitas |
+| `post_community` | Post in community | Post di komunitas (unlimited) |
+| `ask_qna` | Ask in Q&A | Tanya di Q&A |
+| `post_news` | Post news | Post news (approval may be required based on role) |
+| `create_community` | Create community | Buat dan manage community |
+| `create_store` | Create store | Buat store/merchant listing |
+| `create_event` | Create event | Buat event |
+| `view_analytics` | View analytics | Lihat analytics |
+
+**Note on Approval**: 
+- Benefit `post_news` unlock fitur untuk post news, tapi approval flow dihandle oleh **role/permission system**:
+  - Member pro → post_news benefit (post dibuat tapi status = draft)
+  - Admin role → approve_news permission (approve draft posts)
+  - Superadmin → semua post auto-published (no approval needed)
+- Jangan hardcode approval logic di benefit_master — gunakan permission system yang flexible.
 
 ---
 
@@ -750,6 +758,40 @@ CREATE UNIQUE INDEX idx_sub_requests_one_pending
 ```
 
 Jika user submit request kedua saat masih ada yang pending, PostgreSQL langsung throw `unique_violation` — aplikasi tinggal tangkap error ini dan return `409 Conflict`.
+
+---
+
+## Integration with Role & Permission System
+
+**Subscription Benefits** vs **Role Permissions** adalah TWO SEPARATE systems:
+
+### Benefit (Subscription-driven)
+- **Defines**: Apa fitur yang bisa diakses berdasarkan subscription plan
+- **Examples**: `post_news`, `create_store`, `create_community`
+- **Managed by**: superadmin (assign benefits to plans)
+- **Effect**: User dengan plan pro unlock fitur tertentu
+
+### Permission (Role-driven)
+- **Defines**: Siapa yang bisa lakukan aksi berdasarkan role
+- **Examples**: `approve_news` (admin only), `manage_region` (admin only), `post_content` (any role)
+- **Managed by**: usergod/superadmin (assign permissions to roles)
+- **Effect**: User dengan role admin/superadmin dapat approve aksi
+
+### Combined Check Example
+
+**User wants to post news:**
+1. Check benefit: Does user's plan include `post_news` benefit? (subscription check)
+2. If yes → allow to post
+   - If admin role → auto-publish
+   - If member role → save as draft (awaiting approval)
+3. If no → deny with "upgrade required" message
+
+**Admin approves news:**
+1. Check permission: Does user have `approve_news` permission? (role check)
+2. If yes → allow to approve
+3. If no → deny
+
+**Reference**: See `ROLE_PERMISSION_SYSTEM.md` → "Permission Check Logic with Subscription Integration" for detailed logic.
 
 ---
 
