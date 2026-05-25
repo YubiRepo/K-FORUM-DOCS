@@ -332,6 +332,39 @@ CREATE INDEX idx_community_role_perm_community_id
 
 ---
 
+## Integration Notes
+
+### Role-Only vs Plan-Gated Permissions
+
+**Role-Only Permissions** — Subscription plan irrelevant:
+- `approve_news` → Only superadmin/admin (regardless of plan)
+- `assign_role` → Only usergod/superadmin
+- `manage_region` → Only admin (in their region)
+- `moderate_posts` (in community) → Only leader/moderator
+- Community moderation actions → Community role-based only
+
+**Plan-Gated Permissions** — Subscription plan required:
+- `post_news` (as member) → Pro plan only
+- `create_community` → Pro plan only
+- `create_store` → Pro plan only
+- `post_content` → Benefit check (standard has limit, pro has unlimited)
+
+**Combined (Role + Plan)** — Both matter:
+- `post_news` (as admin/superadmin) → Role allows + may bypass approval flow
+- `view_analytics` → Permission required, plan determines depth/features
+
+### Permission Check at Request Time
+
+Every request must check:
+1. **Is this a role-only permission?** → Check role only
+2. **Is this a plan-gated permission?** → Check subscription plan + benefit
+3. **Is this community-scoped?** → Check community role (plan irrelevant)
+4. **Is this a hybrid?** → Check both role AND plan
+
+Refer to `ROLE_PERMISSION_SYSTEM.md` section "Permission Check Logic with Subscription Integration" for detailed logic and pseudocode.
+
+---
+
 ## Catatan Implementasi Golang
 
 ### Tipe Data Mapping

@@ -442,9 +442,175 @@ func CanUserModerateInCommunity(userID, communityID) (bool, error) {
 
 ---
 
+## Permission Check Logic with Subscription Integration
+
+Saat user request aksi, sistem harus check **BOTH** subscription plan AND role permission:
+
+### Category 1: Role-Only Permissions (Plan doesn't matter)
+
+Aksi yang **pure role-based** — subscription plan tidak relevan:
+
+```
+approve_news
+├─ User role = superadmin OR admin?
+├─ Yes → Allow (regardless of plan)
+└─ No → Deny
+
+assign_role
+├─ User role = superadmin OR usergod?
+├─ Yes → Allow
+└─ No → Deny
+
+manage_region
+├─ User role = admin (in their region)?
+├─ Yes → Allow
+└─ No → Deny
+```
+
+**Reasoning**: Admin actions are gated by role, not subscription tier.
+
+---
+
+### Category 2: Plan-Gated Permissions (Role doesn't matter for base access)
+
+Aksi yang **plan-dependent** — siapa saja bisa, selama plan mereka mendukung:
+
+```
+post_news (as member pro)
+├─ Subscription plan = pro?
+├─ Yes → Allow to post (may require approval depending on config)
+└─ No → Deny (upgrade required)
+
+create_store
+├─ Subscription plan = pro?
+├─ Yes → Allow to create merchant store
+└─ No → Deny
+
+create_community
+├─ Subscription plan = pro?
+├─ Yes → Allow to create
+└─ No → Deny
+```
+
+**Reasoning**: Feature unlock based on subscription tier.
+
+---
+
+### Category 3: Role-Gated Plan-Enhanced Permissions
+
+Aksi yang **combine both**: base access dari role, enhanced by plan:
+
+```
+post_content (basic)
+├─ Permission = post_content (from role)?
+├─ Yes → Check plan for additional features
+│  ├─ Plan = pro? → Add "unlimited posting" + "featured badge"
+│  └─ Plan = standard? → Add "limited posting per day"
+├─ No → Deny
+└─ (member role allows posting, plan determines quota/features)
+
+view_analytics
+├─ Permission = view_analytics (from role)?
+├─ Yes → Check plan for dashboard depth
+│  ├─ Plan = pro? → Full analytics (real-time, export, custom filters)
+│  └─ Plan = standard? → Basic analytics (daily summary only)
+├─ No → Deny
+```
+
+**Reasoning**: Base feature is role-controlled, depth/limits by plan.
+
+---
+
+### Category 4: Community-Scoped (Plan doesn't apply)
+
+Aksi dalam komunitas — subscription plan tidak relevan, hanya community role:
+
+```
+moderate_posts (in community)
+├─ User community role = moderator OR leader?
+├─ Yes → Allow
+└─ No → Deny
+
+manage_community_members
+├─ User community role = leader?
+├─ Yes → Allow
+└─ No → Deny
+```
+
+**Reasoning**: Community governance is separate from global subscription tiers.
+
+---
+
+### Example Pseudocode
+
+```go
+func CanUserPostNews(userID string) (bool, error) {
+    // Case: Member wants to post news
+    user := getUser(userID)
+    plan := getUserSubscriptionPlan(userID)
+    role := getUserSystemRole(userID)
+    
+    // Check: is this a plan-gated permission?
+    if plan != "pro" {
+        return false, errors.New("upgrade to pro plan to post news")
+    }
+    
+    // Check: if config requires approval, check role
+    if newsApprovalRequired && role != "admin" && role != "superadmin" {
+        // Pro member can post but goes to draft/pending approval
+        status := "pending_approval"
+        return true, createDraftNews(userID, status) // allowed, but with restriction
+    }
+    
+    return true, nil // allow and auto-publish
+}
+
+func CanUserApproveNews(userID string) (bool, error) {
+    // Case: User wants to approve news
+    role := getUserSystemRole(userID)
+    
+    // Check: is this role-only? (subscription doesn't matter)
+    if role != "superadmin" && role != "admin" {
+        return false, errors.New("only admins can approve news")
+    }
+    
+    return true, nil // allow
+}
+
+func CanUserModerateInCommunity(userID, communityID string) (bool, error) {
+    // Case: User wants to moderate posts in community
+    communityRole := getUserCommunityRole(userID, communityID)
+    
+    // Check: community role (plan not relevant)
+    if communityRole != "leader" && communityRole != "moderator" {
+        return false, errors.New("not a moderator in this community")
+    }
+    
+    return true, nil
+}
+```
+
+---
+
+## Integration Summary
+
+| Aksi | Driven by | Check | Plan Matters? |
+|------|-----------|-------|---------------|
+| post_news (member) | Plan | `plan == "pro"` | ✅ Yes |
+| approve_news | Role | `role IN (superadmin, admin)` | ❌ No |
+| create_community | Plan | `plan == "pro"` | ✅ Yes |
+| create_store | Plan | `plan == "pro"` | ✅ Yes |
+| post_content | Role + Plan | `role has permission` + plan determines quota | ⚠️ Both |
+| moderate_posts (in community) | Role | `community_role IN (leader, moderator)` | ❌ No |
+| join_community | Permission | `permission == "join_community"` | ❌ No |
+| assign_role | Role | `role IN (superadmin, usergod)` | ❌ No |
+| view_analytics | Role + Plan | `role has permission` + plan determines depth | ⚠️ Both |
+
+---
+
 ## Next Step
 
 1. **API Spec Backoffice** — CRUD permission, role-permission assignment (usergod/superadmin)
-2. **API Spec Mobile** — Get user permissions (read-only)
+2. **API Spec Mobile** — Get user permissions (read-only) + subscription plan
 3. **Database Schema** — permissions, user_roles, system_role_permissions, community_role_permissions
 

@@ -618,11 +618,54 @@ Karena permission changes tidak frequent, mobile dapat cache permission list:
 
 ---
 
+## Integration with Subscription Plan
+
+Mobile client harus combine **subscription plan** dengan **permissions** untuk determine akses user:
+
+### Plan-Gated Permissions
+
+Beberapa permission memerlukan subscription plan tertentu:
+
+```javascript
+// Example: Check if user can post news
+const userPerms = await getMyPermissions(); // GET /api/v1/mobile/role-permission/me
+const canPostNews = userPerms.permissions.some(p => p.key === 'post_news') 
+                    && userPerms.subscription_plan === 'pro';
+
+if (canPostNews) {
+  showPostNewsButton();
+} else if (userPerms.subscription_plan !== 'pro') {
+  showUpgradePrompt('Upgrade to Pro to post news');
+} else {
+  hidePostNewsButton();
+}
+```
+
+### Role-Only Permissions
+
+Beberapa permission hanya gated oleh role (plan doesn't matter):
+
+```javascript
+const canApproveNews = userPerms.permissions.some(p => p.key === 'approve_news');
+// no need to check plan
+```
+
+### Reference: Permission Categories
+
+Lihat `ROLE_PERMISSION_SYSTEM.md` → "Permission Check Logic with Subscription Integration" untuk:
+- **Role-Only Permissions** (approval, admin actions)
+- **Plan-Gated Permissions** (post_news, create_store, create_community)
+- **Combined Permissions** (post_content with quotas, view_analytics with depth)
+- **Community-Scoped Permissions** (moderate_posts in community)
+
+---
+
 ## Notes
 
 1. **No Write Operations**: Mobile API adalah read-only. Semua write operations (create permission, assign role) hanya di backoffice API.
-2. **Permission Caching**: Mobile client dapat cache permission list untuk reduce server load.
-3. **Real-time Updates**: Jika ada permission change (via notification), client harus invalidate cache dan refetch.
-4. **Subscription Integration**: Check permission harus juga consider subscription plan (dari `/api/v1/mobile/auth/me`).
+2. **Subscription Plan Included**: Response `/me` mencakup `subscription_plan` untuk client-side permission checks.
+3. **Permission Caching**: Mobile client dapat cache permission list (including plan) untuk reduce server load.
+4. **Real-time Updates**: Jika ada permission/plan change (via notification), client harus invalidate cache dan refetch.
 5. **Scope Awareness**: Untuk permission yang scope-specific, client harus pass scope context.
+6. **Plan-Permission Combo**: Client harus check BOTH subscription plan AND permission untuk plan-gated features.
 
