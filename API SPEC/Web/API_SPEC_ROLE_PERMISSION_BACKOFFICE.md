@@ -453,7 +453,7 @@ Update role information. **Only usergod.**
 
 Ambil semua permission yang di-assign ke satu system role.
 
-- **URL**: `GET /api/v1/web/role-permission/system-role-permissions`
+- **URL**: `GET /api/v1/web/role-permission/role-permissions`
 - **Autentikasi**: Yes
 - **Authorization**: usergod or superadmin
 - **Query Parameters**:
@@ -502,7 +502,7 @@ Ambil semua permission yang di-assign ke satu system role.
 
 Assign satu permission ke satu system role.
 
-- **URL**: `POST /api/v1/web/role-permission/system-role-permissions`
+- **URL**: `POST /api/v1/web/role-permission/role-permissions`
 - **Autentikasi**: Yes
 - **Authorization**: superadmin (untuk superadmin/admin role), usergod (untuk semua role)
 - **Request Body**:
@@ -552,7 +552,7 @@ Assign satu permission ke satu system role.
 
 Hapus assignment permission dari system role.
 
-- **URL**: `DELETE /api/v1/web/role-permission/system-role-permissions/{assignment_id}`
+- **URL**: `DELETE /api/v1/web/role-permission/role-permissions/{assignment_id}`
 - **Autentikasi**: Yes
 - **Authorization**: superadmin or usergod
 - **Response (Success 200)**:
@@ -568,7 +568,7 @@ Hapus assignment permission dari system role.
 
 Assign multiple permissions sekaligus ke satu role (convenience endpoint).
 
-- **URL**: `POST /api/v1/web/role-permission/system-role-permissions/bulk-assign`
+- **URL**: `POST /api/v1/web/role-permission/role-permissions/bulk-assign`
 - **Autentikasi**: Yes
 - **Authorization**: superadmin or usergod
 - **Request Body**:
@@ -874,171 +874,7 @@ Hapus role assignment (hard delete).
 
 ## Community Role-Permission Assignment Endpoints
 
-### 1. List Community Role Permissions
-
-Ambil semua permission yang di-assign ke community roles dalam satu komunitas.
-
-- **URL**: `GET /api/v1/web/role-permission/community-role-permissions`
-- **Autentikasi**: Yes
-- **Authorization**: usergod or superadmin or community leader
-- **Query Parameters**:
-  - `community_id` (required): Filter by community
-  - `role_id` (optional): Filter by role
-  - `permission_id` (optional): Filter by permission
-  - `limit` (optional, default: 100)
-  - `offset` (optional, default: 0)
-
-- **Response (Success 200)**:
-  ```json
-  {
-    "data": [
-      {
-        "id": "uuid",
-        "community_id": "uuid",
-        "role_id": "uuid",
-        "role": {
-          "id": "uuid",
-          "name": "leader",
-          "display_name": "Community Leader"
-        },
-        "permission_id": "uuid",
-        "permission": {
-          "id": "uuid",
-          "key": "post_content",
-          "display_name": "Post Content",
-          "scope": "community",
-          "category": "content",
-          "risk_level": "low"
-        },
-        "assigned_at": "2026-05-20T00:00:00.000Z",
-        "assigned_by": "uuid",
-        "override_permission": false,
-        "notes": null
-      }
-    ],
-    "pagination": {
-      "limit": 100,
-      "offset": 0,
-      "total": 20
-    }
-  }
-  ```
-
----
-
-### 2. Assign Permission to Community Role
-
-Assign permission ke community role dalam komunitas tertentu.
-
-- **URL**: `POST /api/v1/web/role-permission/community-role-permissions`
-- **Autentikasi**: Yes
-- **Authorization**: usergod or superadmin or community leader
-- **Request Body**:
-  ```json
-  {
-    "community_id": "uuid",
-    "role_id": "uuid",
-    "permission_id": "uuid",
-    "override_permission": false,
-    "notes": "Allow moderators to delete posts"
-  }
-  ```
-- **Response (Success 201)**:
-  ```json
-  {
-    "data": {
-      "id": "uuid",
-      "community_id": "uuid",
-      "role_id": "uuid",
-      "role": {
-        "id": "uuid",
-        "name": "moderator",
-        "display_name": "Community Moderator"
-      },
-      "permission_id": "uuid",
-      "permission": {
-        "id": "uuid",
-        "key": "delete_content",
-        "display_name": "Delete Content",
-        "scope": "community",
-        "category": "moderation",
-        "risk_level": "high"
-      },
-      "assigned_at": "2026-05-20T00:00:00.000Z",
-      "assigned_by": "uuid",
-      "override_permission": false,
-      "notes": "Allow moderators to delete posts"
-    }
-  }
-  ```
-
----
-
-### 3. Revoke Permission from Community Role
-
-Hapus permission dari community role.
-
-- **URL**: `DELETE /api/v1/web/role-permission/community-role-permissions/{assignment_id}`
-- **Autentikasi**: Yes
-- **Authorization**: usergod or superadmin or community leader (own community)
-- **Response (Success 200)**:
-  ```json
-  {
-    "message": "Permission revoked from community role successfully"
-  }
-  ```
-
----
-
-### 4. Bulk Assign Permissions to Community Role
-
-Assign multiple permissions sekaligus ke community role.
-
-- **URL**: `POST /api/v1/web/role-permission/community-role-permissions/bulk-assign`
-- **Autentikasi**: Yes
-- **Authorization**: usergod or superadmin or community leader
-- **Request Body**:
-  ```json
-  {
-    "community_id": "uuid",
-    "role_id": "uuid",
-    "permission_ids": ["uuid1", "uuid2", "uuid3"],
-    "notes": "Setup default permissions for new moderator role"
-  }
-  ```
-- **Response (Success 201)**:
-  ```json
-  {
-    "data": {
-      "community_id": "uuid",
-      "role_id": "uuid",
-      "assigned_count": 3,
-      "skipped_count": 0,
-      "assignments": [
-        {
-          "id": "uuid",
-          "permission_id": "uuid1",
-          "permission_key": "post_content",
-          "status": "assigned"
-        },
-        {
-          "id": "uuid",
-          "permission_id": "uuid2",
-          "permission_key": "moderate_posts",
-          "status": "assigned"
-        },
-        {
-          "id": "uuid",
-          "permission_id": "uuid3",
-          "permission_key": "delete_content",
-          "status": "assigned"
-        }
-      ]
-    }
-  }
-  ```
-
----
+Not implemented in phase 1, will be added in future updates.
 
 ## Audit & Reporting Endpoints
 
