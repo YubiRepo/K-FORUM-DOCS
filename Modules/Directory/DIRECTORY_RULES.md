@@ -1,703 +1,546 @@
-# Directory Module — Business Rules & Structure (REVISED)
+# Directory Module — System Rules (v2.0)
 
-Dokumentasi struktur dan aturan Directory module KAI App - dengan Product & Service di-merge dan Region ID optional.
+Dokumentasi lengkap system rules Directory module KAI App. Mencakup semua aturan bisnis, validasi, lifecycle, dan constraint.
 
 ---
 
-## 1. HIERARCHY STRUCTURE
+## 1. OVERVIEW & TUJUAN
+
+Directory adalah fitur yang memungkinkan **Member Pro** mendaftarkan bisnis/toko mereka ke dalam katalog bisnis komunitas Korea-Indonesia. Member biasa dapat menelusuri, menyimpan, mereview, dan menghubungi merchant.
+
+**Scope**: Global — semua user dapat melihat semua merchant dari seluruh region.
+
+---
+
+## 2. HIERARCHY STRUCTURE
 
 ```
 Member Pro (User)
-  └── Company (Bisnis utama - owner)
-       ├── Company Settings (name, logo, description)
-       ├── Merchant 1 (Toko/outlet)
-       │    ├── Categories (multiple)
-       │    ├── Items/Offerings (Product + Service merged)
-       │    └── Reviews
+  └── Company (Bisnis utama)
+       ├── Company Profile (name, logo, description, contact)
        │
-       ├── Merchant 2 (Outlet lain)
-       │    ├── Categories (multiple)
-       │    ├── Items/Offerings
-       │    └── Reviews
+       ├── Merchant 1 (Toko/outlet/cabang)
+       │    ├── Categories (multiple, dari category_master)
+       │    ├── Images (min 1)
+       │    ├── Location (optional untuk online, wajib untuk fisik)
+       │    ├── Operating Hours
+       │    ├── Contact Info
+       │    ├── Items (Product + Service merged, unlimited)
+       │    │    ├── Item Type: "product" (harga tunggal, stock optional)
+       │    │    └── Item Type: "service" (price_range, duration)
+       │    ├── Reviews (user → merchant, 1 review per user)
+       │    └── Inquiries (user → merchant, tanya jawab)
        │
+       ├── Merchant 2
        └── Merchant N
-            ├── Categories (multiple)
-            ├── Items/Offerings
-            └── Reviews
-```
-
-### Key Structure:
-
-**Company:**
-- Bisnis utama yang di-own oleh Member Pro
-- Satu Member Pro bisa punya multiple companies
-- Contoh: "PT Impor Korea" adalah company
-
-**Merchant:**
-- Toko/outlet/cabang/sales channel dalam company
-- Satu company bisa punya multiple merchants
-- Contoh: "Toko Jakarta Pusat", "Online Store", "Service Center"
-- Merchant bisa punya lokasi fisik (optional)
-
-**Category:**
-- Kategori bisnis tempat merchant beroperasi
-- Satu merchant bisa punya multiple categories
-- Contoh: "Retail", "Food & Beverage", "Service", "Beauty"
-
-**Item/Offering:**
-- Product ATAU Service yang dijual merchant (di-merge dalam satu entity)
-- Satu merchant bisa punya mix of products & services
-- Product: punya harga tunggal, stock (optional)
-- Service: punya price range, duration
-
----
-
-## 2. WHO CAN CREATE WHAT
-
-### Member Pro Permissions:
-
-| Action | Permission | Notes |
-|--------|-----------|-------|
-| Create Company | ✅ Yes | Unlimited per Member Pro |
-| Create Merchant | ✅ Yes | Unlimited per company (subject to limits) |
-| Add Categories to Merchant | ✅ Yes | Multiple categories per merchant |
-| Add Items (Product + Service) | ✅ Yes | Unlimited per merchant (subject to limits) |
-| Edit own Company/Merchant | ✅ Yes | Only owner atau authorized |
-| Delete Company/Merchant | ✅ Yes | If no items |
-| Archive Merchant | ✅ Yes | Keep data, hide dari directory |
-| View own Directory Dashboard | ✅ Yes | See own companies & merchants |
-| View all Directory | ✅ Yes | Public listing |
-| Save/Favorite Merchant | ✅ Yes | Bookmark |
-| Review Merchant | ✅ Yes | After conditions (if enabled) |
-| Contact Merchant | ✅ Yes | Inquiry form |
-
-### Admin Permissions:
-
-| Action | Superadmin | Admin Regional |
-|--------|-----------|-----------------|
-| View all companies | ✅ Yes | ✅ Yes (filter by region) |
-| View all merchants | ✅ Yes | ✅ Yes (own region) |
-| Approve/Reject merchant | ✅ Yes | ✅ Yes (own region) |
-| Manage categories master | ✅ Yes | ❌ No |
-| Ban merchant | ✅ Yes | ✅ Yes (own region) |
-| Delete merchant (force) | ✅ Yes | ❌ No |
-| Manage Directory Settings | ✅ Yes | ❌ No |
-| View analytics & stats | ✅ Yes | ✅ Yes (own region) |
-
-### Regular Member Permissions:
-
-| Action | Permission |
-|--------|-----------|
-| View directory | ✅ Yes |
-| Search merchants | ✅ Yes |
-| Filter by category/location/rating | ✅ Yes |
-| View merchant detail | ✅ Yes |
-| Save/Favorite merchant | ✅ Yes |
-| Review merchant | ✅ Yes |
-| Share merchant | ✅ Yes |
-| Contact merchant (inquiry) | ✅ Yes |
-| Create company/merchant | ❌ No (requires Member Pro) |
-
----
-
-## 3. COMPANY STRUCTURE
-
-### Company Object:
-
-```json
-{
-  "id": "cmp_001",
-  "owner_id": "user_pro_001",
-  "name": "PT Impor Korea",
-  "description": "Distributor produk Korea authentic dengan berbagai kategori...",
-  "logo_url": "https://cdn.../logo.jpg",
-  
-  "contact": {
-    "phone": "0212345678",
-    "email": "contact@ptkore.com",
-    "website": "https://ptkore.com"
-  },
-  
-  "merchant_count": 3,
-  "status": "active",
-  
-  "created_at": "2026-01-15T00:00:00Z",
-  "updated_at": "2026-05-20T10:00:00Z"
-}
-```
-
-### Company Lifecycle:
-
-```
-Created → Active → Inactive (manual) / Banned (by admin)
 ```
 
 ---
 
-## 4. MERCHANT STRUCTURE
+## 3. ACTOR & PERMISSION MATRIX
 
-### Merchant Object:
+### 3.1 Member Pro (Merchant Owner)
 
-```json
-{
-  "id": "mch_001",
-  "company_id": "cmp_001",
-  "owner_id": "user_pro_001",
-  
-  "name": "Toko Jakarta Pusat",
-  "description": "Outlet utama kami di Jakarta dengan koleksi lengkap...",
-  "type": "retail",
-  
-  "categories": [
-    { "id": "cat_retail", "name": "Retail" },
-    { "id": "cat_food", "name": "Food & Beverage" }
-  ],
-  
-  "location": {
-    "address": "Jl. Ahmad Yani No. 123, Jakarta Pusat",
-    "city": "Jakarta",
-    "province": "DKI Jakarta",
-    "latitude": -6.2088,
-    "longitude": 106.8905,
-    "region_id": "region_jakarta"  // AUTO-DERIVED dari lat/lng, OPTIONAL
-  },
-  
-  "contact": {
-    "phone": "0212345678",
-    "email": "jakarta@ptkore.com",
-    "whatsapp": "0812345678",
-    "instagram": "@ptkore_jakarta"
-  },
-  
-  "hours": {
-    "monday": { "open": "09:00", "close": "18:00", "closed": false },
-    "tuesday": { "open": "09:00", "close": "18:00", "closed": false },
-    "wednesday": { "open": "09:00", "close": "18:00", "closed": false },
-    "thursday": { "open": "09:00", "close": "18:00", "closed": false },
-    "friday": { "open": "09:00", "close": "20:00", "closed": false },
-    "saturday": { "open": "10:00", "close": "20:00", "closed": false },
-    "sunday": { "closed": true }
-  },
-  
-  "stats": {
-    "item_count": 53,  // product + service combined
-    "review_count": 123,
-    "rating": 4.5,
-    "favorite_count": 234,
-    "inquiry_count": 45,
-    "total_views": 5420
-  },
-  
-  "images": [
-    { "url": "https://cdn.../merchant_1.jpg", "order": 1, "is_primary": true },
-    { "url": "https://cdn.../merchant_2.jpg", "order": 2, "is_primary": false }
-  ],
-  
-  "status": "published",
-  "approval_status": "approved",
-  
-  "settings": {
-    "allow_reviews": true,
-    "allow_inquiries": true,
-    "auto_reply_inquiries": false,
-    "auto_reply_message": null,
-    "featured": false
-  },
-  
-  "created_at": "2026-02-10T00:00:00Z",
-  "published_at": "2026-02-12T10:00:00Z",
-  "approved_at": "2026-02-12T10:00:00Z",
-  "approved_by": "admin_001"
-}
-```
+| Action | Rule |
+|--------|------|
+| Create Company | ✅ Unlimited |
+| Edit/Delete Company | ✅ Only own company |
+| Create Merchant | ✅ Unlimited per company (subject to settings) |
+| Edit Merchant | ✅ Only own merchant |
+| Archive Merchant | ✅ Hides dari listing, data tetap ada |
+| Delete Merchant | ✅ Hanya jika belum punya reviews/inquiries, atau force by admin |
+| Publish Merchant | ✅ Trigger approval flow (lihat §5) |
+| Add/Edit/Delete Items | ✅ Only own merchant |
+| Reply Inquiry | ✅ Only own merchant |
+| View own stats/analytics | ✅ |
+| Review own merchant | ❌ Tidak diperbolehkan |
 
-### Merchant Types:
+### 3.2 Regular Member
 
-| Type | Description | Requires Location? |
-|------|-------------|-------------------|
-| retail | Toko penjualan retail | If `allow_online_only = false` |
-| online | Online shop / e-commerce | No |
-| service | Penyedia jasa | If `allow_online_only = false` |
-| food_beverage | Restaurant / cafe | If `allow_online_only = false` |
-| beauty | Salon / spa | If `allow_online_only = false` |
-| other | Lainnya | Depends on setting |
+| Action | Rule |
+|--------|------|
+| Browse directory | ✅ Lihat semua published merchant |
+| Search & filter | ✅ Category, kota, rating, nama |
+| View merchant detail | ✅ |
+| Save/unsave merchant | ✅ |
+| Leave review | ✅ 1 review per merchant per user |
+| Edit own review | ✅ |
+| Send inquiry | ✅ |
+| Create company/merchant | ❌ Requires Member Pro plan |
 
-**Location Rules:**
-- **Online-only merchant** (type: online) → address & region_id OPTIONAL
-- **Physical location merchant** (retail/service/food/beauty) → address wajib, lat/lng wajib, region_id auto-derived
-- Region ID tidak perlu di-input user, di-derive otomatis dari latitude/longitude
+### 3.3 Admin Regional
+
+| Action | Rule |
+|--------|------|
+| View companies | ✅ Hanya region sendiri |
+| View & filter merchants | ✅ Hanya region sendiri |
+| Approve merchant | ✅ Hanya region sendiri |
+| Reject merchant | ✅ Hanya region sendiri (wajib sertakan reason) |
+| Ban merchant | ✅ Hanya region sendiri |
+| Delete merchant (force) | ❌ Hanya Superadmin |
+| Moderate reviews | ✅ Region sendiri |
+| View analytics | ✅ Hanya region sendiri |
+| Manage category master | ❌ |
+| Manage directory settings | ❌ |
+
+### 3.4 Superadmin
+
+| Action | Rule |
+|--------|------|
+| Semua aksi Admin Regional | ✅ Semua region |
+| Delete company/merchant (force) | ✅ |
+| Manage category master | ✅ |
+| Manage directory settings | ✅ |
+| View global analytics | ✅ |
+| Unban merchant | ✅ |
 
 ---
 
-## 5. MERCHANT APPROVAL FLOW
+## 4. COMPANY RULES
 
-### State Diagram:
+### 4.1 Validasi Create/Update Company
+
+| Field | Required | Constraint |
+|-------|----------|-----------|
+| name | ✅ | Min 3, max 200 char |
+| description | ❌ | Max 2000 char |
+| logo_url | ❌ | Valid URL, upload via media API terlebih dahulu |
+| phone | ❌ | Format Indonesia (+62 atau 0xxx) |
+| email | ❌ | Valid email format |
+| website | ❌ | Valid URL |
+
+### 4.2 Company Lifecycle
 
 ```
-Member Pro create merchant → validation check
-   ├─ Name required ✓
-   ├─ Description required ✓
-   ├─ At least 1 category ✓
-   ├─ Location (depends on type & settings) ✓
-   └─ At least 1 image (recommended) ✓
-   
-   ↓
-   
-require_merchant_approval setting?
-   ├─ YES → status: pending_approval
-   │        (Admin review)
-   │        ├─ Approve → status: published
-   │        └─ Reject → status: rejected (can resubmit)
-   │
-   └─ NO → status: auto_published (immediate)
+create → active
+active → inactive  (owner set manual)
+active → banned    (by admin)
+inactive → active  (owner reaktivasi)
+banned → active    (Superadmin only, unban)
 ```
+
+### 4.3 Company Rules
+
+- Satu Member Pro dapat punya **unlimited companies**
+- Company yang `banned` → semua merchantnya otomatis tidak tampil di listing
+- Company tidak bisa dihapus jika masih punya merchant aktif
+- Company `inactive` → merchant tetap bisa publish (company tidak affect merchant visibility secara langsung, hanya status company sendiri)
 
 ---
 
-## 6. ITEMS/OFFERINGS (Product + Service Merged)
+## 5. MERCHANT RULES
 
-### Single Item Object (Product):
+### 5.1 Merchant Types
 
-```json
-{
-  "id": "item_001",
-  "merchant_id": "mch_001",
-  
-  "type": "product",
-  
-  "name": "Korean Red Ginseng",
-  "description": "Authentic Korean red ginseng from Geumsan...",
-  "category": "Health & Wellness",
-  
-  "price": 150000,
-  "currency": "IDR",
-  "unit": "per pack",
-  
-  "images": [
-    { "url": "https://cdn.../product_1.jpg", "order": 1, "is_primary": true },
-    { "url": "https://cdn.../product_2.jpg", "order": 2, "is_primary": false }
-  ],
-  
-  "stock": null,  // null = unlimited, atau number untuk limited stock
-  "status": "available",
-  
-  "created_at": "2026-03-10T00:00:00Z",
-  "updated_at": "2026-03-10T00:00:00Z"
-}
-```
+| Type | Deskripsi | Location Wajib? |
+|------|-----------|-----------------|
+| `retail` | Toko penjualan produk fisik | ✅ Ya |
+| `food_beverage` | Restaurant, cafe, catering | ✅ Ya |
+| `beauty` | Salon, spa, klinik kecantikan | ✅ Ya |
+| `service` | Jasa konsultasi, reparasi, rental | ✅ Ya |
+| `online` | Online shop, e-commerce murni | ❌ Opsional |
+| `other` | Lainnya | Depends on `require_location_for_physical` setting |
 
-### Single Item Object (Service):
+### 5.2 Validasi Create/Update Merchant
 
-```json
-{
-  "id": "item_002",
-  "merchant_id": "mch_001",
-  
-  "type": "service",
-  
-  "name": "Korean Beauty Treatment",
-  "description": "Authentic Korean skincare treatment dengan produk Korea...",
-  "category": "Beauty Treatment",
-  
-  "price_range": {
-    "min": 200000,
-    "max": 500000,
-    "currency": "IDR"
-  },
-  
-  "duration_minutes": 60,
-  
-  "images": [
-    { "url": "https://cdn.../service_1.jpg", "order": 1, "is_primary": true }
-  ],
-  
-  "status": "available",
-  
-  "created_at": "2026-03-15T00:00:00Z",
-  "updated_at": "2026-03-15T00:00:00Z"
-}
-```
+| Field | Required | Constraint |
+|-------|----------|-----------|
+| company_id | ✅ | Must own company |
+| name | ✅ | Min 3, max 200 char |
+| description | ✅ | Min 20, max 3000 char |
+| type | ✅ | Enum: retail, online, service, food_beverage, beauty, other |
+| categories | ✅ | Min 1, max 5, dari category_master |
+| images | ✅ (jika `min_images_before_publish` > 0) | Min 1, max 10, upload terlebih dahulu |
+| address | ✅ (jika type ≠ online) | Max 500 char |
+| latitude | ✅ (jika type ≠ online) | Valid lat: -90 to 90 |
+| longitude | ✅ (jika type ≠ online) | Valid lng: -180 to 180 |
+| region_id | ❌ | AUTO-DERIVED dari lat/lng via geo-lookup |
+| city | ❌ | Auto-fill dari geocoding |
+| province | ❌ | Auto-fill dari geocoding |
+| phone | ❌ (setidaknya 1 contact) | Format valid |
+| email | ❌ | Format valid |
+| whatsapp | ❌ | Format valid |
+| instagram | ❌ | Max 50 char |
+| hours | ❌ | JSON per hari (open, close, closed) |
 
-### Item Rules:
+### 5.3 Merchant Approval Flow
 
 ```
-✅ One merchant = Multiple items (product + service mix)
-✅ Unlimited items per merchant (unless settings limit)
-✅ Product: harga tunggal, stock optional
-✅ Service: price range, duration
-✅ Category: free text (bukan master list)
-✅ Image minimum 1, recommended 3+
-✅ Stock bisa unlimited (null) atau limited number
-✅ Cannot set price = 0 (free tidak diizinkan MVP)
-✅ Type: "product" atau "service"
+[Member Pro] → Create/Submit Merchant
+       │
+       ▼
+[System] Validasi field wajib
+       │
+       ├── FAIL → Return validation error (status: draft)
+       │
+       └── PASS → Cek setting require_merchant_approval
+                     │
+                     ├── TRUE → status: pending_approval
+                     │          → Notifikasi ke Admin Regional (jika ada) / Superadmin
+                     │          │
+                     │          ├── [Admin] Approve → status: published, published_at = NOW()
+                     │          │                  → Notifikasi ke owner: "Merchant disetujui"
+                     │          │
+                     │          └── [Admin] Reject  → status: rejected, rejection_reason wajib
+                     │                             → Notifikasi ke owner: "Merchant ditolak: {reason}"
+                     │                             → Owner dapat edit & resubmit
+                     │
+                     └── FALSE → status: published (auto-approve)
+                                → published_at = NOW()
 ```
+
+### 5.4 Merchant Status & Visibility
+
+| Status | Visible di Listing | Owner Lihat | Admin Lihat |
+|--------|--------------------|-------------|-------------|
+| `draft` | ❌ | ✅ | ✅ |
+| `pending_approval` | ❌ | ✅ (dengan status info) | ✅ |
+| `published` | ✅ | ✅ | ✅ |
+| `rejected` | ❌ | ✅ (dengan reason) | ✅ |
+| `archived` | ❌ | ✅ | ✅ |
+| `banned` | ❌ | ✅ (dengan reason) | ✅ |
+
+### 5.5 Merchant Archive vs Delete vs Ban
+
+```
+Archive (by owner):
+  - Merchant disembunyikan dari public listing
+  - Data tetap lengkap (items, reviews, inquiries)
+  - Owner masih bisa lihat & unarchive kapan saja
+  - Bisa jadi: published kembali
+
+Delete (by owner):
+  - Hanya bisa jika: reviews_count = 0 AND inquiries_count = 0
+  - Jika sudah ada data, gunakan Archive
+  - Hard delete dari database
+
+Force Delete (Superadmin only):
+  - Bisa delete meski ada reviews/inquiries
+  - Cascade delete semua related data
+
+Ban (by Admin):
+  - Merchant tidak tampil, tidak bisa diubah owner
+  - Merchant bisa di-unban oleh Superadmin
+  - Alasan ban wajib dicatat
+```
+
+### 5.6 Merchant Stats (Computed/Cached)
+
+Stats berikut di-update secara realtime atau via background job:
+
+| Field | Source | Update Trigger |
+|-------|--------|----------------|
+| `item_count` | COUNT items WHERE status != archived | Item add/delete/archive |
+| `review_count` | COUNT reviews WHERE status = published | Review create/moderate |
+| `rating` | AVG(rating) dari published reviews | Review create/update |
+| `favorite_count` | COUNT favorites | Favorite add/remove |
+| `inquiry_count` | COUNT inquiries | Inquiry create |
+| `total_views` | Increment per unique page view | Merchant detail viewed |
 
 ---
 
-## 7. MERCHANT CATEGORIES
+## 6. ITEM RULES (Product + Service Merged)
 
-### Category Master (Admin Maintained):
+### 6.1 Validasi Item
 
-```json
-[
-  {
-    "id": "cat_retail",
-    "name": "Retail",
-    "description": "Toko penjualan produk retail",
-    "icon": "🏬",
-    "is_active": true,
-    "order": 1
-  },
-  {
-    "id": "cat_food",
-    "name": "Food & Beverage",
-    "description": "Restaurant, cafe, food delivery",
-    "icon": "🍽️",
-    "is_active": true,
-    "order": 2
-  },
-  {
-    "id": "cat_service",
-    "name": "Service",
-    "description": "Consulting, repair, rental, dll",
-    "icon": "🔧",
-    "is_active": true,
-    "order": 3
-  },
-  {
-    "id": "cat_beauty",
-    "name": "Beauty & Salon",
-    "description": "Salon, spa, beauty treatment",
-    "icon": "💄",
-    "is_active": true,
-    "order": 4
-  }
-]
+#### Untuk Product (`type: "product"`):
+
+| Field | Required | Constraint |
+|-------|----------|-----------|
+| name | ✅ | Min 3, max 200 char |
+| type | ✅ | `"product"` |
+| price | ✅ | > 0, max 999.999.999 |
+| currency | ✅ | Default: `IDR` |
+| unit | ❌ | Max 50 char (contoh: "per pack", "per kg") |
+| description | ❌ | Max 2000 char |
+| category | ❌ | Free text, max 100 char |
+| images | ✅ (min 1) | Max 10 images |
+| stock | ❌ | null = unlimited; integer ≥ 0 = limited |
+| status | ✅ | `available` atau `unavailable` |
+
+#### Untuk Service (`type: "service"`):
+
+| Field | Required | Constraint |
+|-------|----------|-----------|
+| name | ✅ | Min 3, max 200 char |
+| type | ✅ | `"service"` |
+| price_min | ✅ | > 0 |
+| price_max | ✅ | ≥ price_min |
+| currency | ✅ | Default: `IDR` |
+| duration_minutes | ❌ | Positive integer |
+| description | ❌ | Max 2000 char |
+| category | ❌ | Free text, max 100 char |
+| images | ✅ (min 1) | Max 10 images |
+| status | ✅ | `available` atau `unavailable` |
+
+### 6.2 Item Business Rules
+
 ```
-
-### Merchant Category Association:
-
-```json
-{
-  "merchant_id": "mch_001",
-  "categories": [
-    { "id": "cat_retail", "name": "Retail", "primary": true },
-    { "id": "cat_food", "name": "Food & Beverage", "primary": false }
-  ]
-}
+✅ Item category adalah FREE TEXT (bukan dari master list)
+✅ Satu merchant bisa mix product + service
+✅ Tidak ada batasan jumlah item per merchant (kecuali `item_max_per_merchant` setting)
+✅ Item tidak bisa harga Rp 0 (kecuali `allow_free_price` setting = true)
+✅ Image item min 1, max 10
+✅ Merchant yang `banned` atau `archived` → item tidak tampil
+✅ Item status `unavailable` → tetap tampil tapi dengan label "Tidak Tersedia"
+✅ Item tidak perlu approval terpisah (kecuali `item_require_approval` setting = true)
 ```
 
 ---
 
-## 8. REVIEWS & RATINGS
+## 7. CATEGORY MASTER RULES
 
-### Review Object:
+### 7.1 Struktur
 
-```json
-{
-  "id": "rev_001",
-  "merchant_id": "mch_001",
-  "user_id": "user_123",
-  "user_name": "Budi Santoso",
-  "user_avatar": "https://cdn.../avatar.jpg",
-  
-  "rating": 4,
-  "title": "Produk bagus, tapi lama delivery",
-  "review_text": "Produk original dan kualitas bagus. Hanya saja pengiriman agak lama...",
-  
-  "aspects": {
-    "product_quality": 5,
-    "service": 4,
-    "price": 4
-  },
-  
-  "helpful_count": 23,
-  "unhelpful_count": 2,
-  
-  "status": "published",
-  "created_at": "2026-04-20T10:00:00Z",
-  "updated_at": "2026-04-20T10:00:00Z"
-}
-```
-
-### Review Rules:
+Category master dikelola oleh Superadmin. Merchant dapat pilih 1-5 kategori dari daftar ini.
 
 ```
-✅ One user = One review per merchant
-✅ User dapat edit review
-✅ Cannot delete review (dapat hide)
-✅ Rating 1-5 stars (wajib)
-✅ Review text optional
-✅ Moderation dapat diaktifkan via settings
-✅ User dapat mark helpful/unhelpful
+Kategori default:
+  - Retail 🏬
+  - Food & Beverage 🍽️
+  - Service 🔧
+  - Beauty & Salon 💄
+  - Health & Wellness 🏥
+  - Education 📚
+  - Entertainment 🎭
+  - Travel & Tourism ✈️
+  - Finance & Insurance 💰
+  - Technology 💻
+  - Fashion 👗
+  - Other 📦
+```
+
+### 7.2 Category Rules
+
+```
+✅ Superadmin dapat add/edit/deactivate kategori
+✅ Kategori yang di-deactivate: tidak muncul di pilihan baru, existing merchant tidak terpengaruh
+✅ Kategori tidak bisa dihapus jika masih ada merchant menggunakannya
+✅ Merchant wajib pilih minimum 1 kategori
+✅ Merchant bisa pilih maximum 5 kategori
+✅ Urutan tampil di UI ditentukan oleh field `order`
 ```
 
 ---
 
-## 9. INQUIRIES & CONTACT
+## 8. REVIEW RULES
 
-### Inquiry Object:
+### 8.1 Validasi Review
 
-```json
-{
-  "id": "inq_001",
-  "merchant_id": "mch_001",
-  "user_id": "user_123",
-  "user_name": "Citra Dewi",
-  "user_email": "citra@example.com",
-  "user_phone": "0812345678",
-  
-  "subject": "Inquiry: Stok Korean Ginseng",
-  "message": "Apakah masih ada stok untuk produk Korean Red Ginseng?",
-  
-  "status": "pending",
-  "replied_at": null,
-  "merchant_reply": null,
-  
-  "created_at": "2026-05-20T15:00:00Z",
-  "closed_at": null
-}
-```
+| Field | Required | Constraint |
+|-------|----------|-----------|
+| rating | ✅ | Integer 1-5 |
+| title | ❌ | Max 200 char |
+| review_text | ❌ | Max 2000 char |
+| aspects.product_quality | ❌ | Integer 1-5 |
+| aspects.service | ❌ | Integer 1-5 |
+| aspects.price | ❌ | Integer 1-5 |
 
-### Inquiry States:
+### 8.2 Review Business Rules
 
 ```
-pending → replied → closed
+✅ 1 user = 1 review per merchant (unique constraint)
+✅ User dapat EDIT review yang sudah ada (update, bukan create baru)
+✅ User TIDAK bisa delete review
+✅ Merchant owner TIDAK bisa review merchant sendiri
+✅ Rating 1-5 WAJIB; title & text OPSIONAL
+✅ Merchant rating (avg) di-update setelah setiap review create/update
+✅ Jika `require_moderation = true` → review status: `pending` dulu
+   - Admin approve → status: `published`
+   - Admin reject → status: `rejected`
+   - Default (jika moderation OFF) → status: `published` langsung
+✅ Helpful/unhelpful voting: 1 user 1 vote per review
+✅ Review `pending` tidak tampil di public listing
 ```
 
----
+### 8.3 Review Moderation States
 
-## 10. FAVORITE/SAVE MERCHANT
-
-### Favorite Object:
-
-```json
-{
-  "id": "fav_001",
-  "user_id": "user_123",
-  "merchant_id": "mch_001",
-  
-  "note": "Toko favorit untuk beli ginseng",
-  "saved_at": "2026-05-20T10:00:00Z"
-}
+```
+pending → published  (admin approve)
+pending → rejected   (admin reject)
+published → hidden   (admin hide, tidak hapus)
+rejected → pending   (admin re-queue)
 ```
 
 ---
 
-## 11. DIRECTORY SETTINGS & CONFIGURATION
+## 9. INQUIRY RULES
 
-### Directory Settings:
+### 9.1 Validasi Inquiry
 
-```json
-{
-  "merchant": {
-    "require_approval": true,
-    "max_per_member": null,
-    "min_items_before_publish": 0,
-    "min_images_before_publish": 1
-  },
-  
-  "item": {
-    "require_approval": false,
-    "max_per_merchant": null,
-    "allow_free_price": false
-  },
-  
-  "review": {
-    "allow_reviews": true,
-    "require_moderation": true,
-    "waiting_period_days": 0,
-    "require_purchase_verification": false
-  },
-  
-  "inquiry": {
-    "allow_inquiries": true,
-    "auto_close_days": 30,
-    "allow_auto_reply": true
-  },
-  
-  "verification": {
-    "require_phone": true,
-    "require_identity": false
-  },
-  
-  "features": {
-    "allow_online_only": true,
-    "allow_multiple_categories": true,
-    "featured_merchant_enabled": false
-  },
-  
-  "location": {
-    "require_location_for_physical": true,
-    "auto_derive_region": true,
-    "enable_map_view": true
-  }
-}
+| Field | Required | Constraint |
+|-------|----------|-----------|
+| subject | ✅ | Min 5, max 200 char |
+| message | ✅ | Min 10, max 2000 char |
+
+### 9.2 Inquiry Business Rules
+
+```
+✅ Inquiry dibuat oleh member (login wajib)
+✅ Merchant owner mendapat notifikasi saat ada inquiry baru
+✅ Merchant owner dapat reply 1x (setelah reply, status → replied)
+✅ Inquiry dapat di-close oleh owner atau auto-close setelah `auto_close_days` hari
+✅ User dapat lihat semua inquiry mereka (ke semua merchant)
+✅ Merchant owner dapat lihat semua inquiry ke merchant mereka
+✅ Jika `allow_inquiries = false` pada merchant settings → inquiry form tidak muncul
+✅ Jika `allow_auto_reply = true` → sistem kirim auto_reply_message sebelum owner reply
+```
+
+### 9.3 Inquiry States
+
+```
+pending → replied  (merchant owner reply)
+pending → closed   (auto-close atau manual)
+replied → closed   (auto-close atau manual)
 ```
 
 ---
 
-## 12. SCOPES & VISIBILITY
+## 10. LOCATION & REGION RULES
+
+### 10.1 Region Derivation
 
 ```
-Directory Scope: GLOBAL
-  - All users dapat lihat merchant
-  - Merchant dari any region visible ke all users
-  - Admin dapat filter by region untuk manage
-
-User Filtering:
-  - Category
-  - Location/City (bukan region_id)
-  - Rating
-  - Merchant Name (search)
-  - Favorites
+Merchant fisik dengan lat/lng → sistem call geo-lookup API
+  └── Return: region_id, city, province
+  └── Simpan ke merchant record
+  └── User tidak perlu input region_id manual
 ```
 
-### Merchant Visibility Status:
+### 10.2 Location Rules per Merchant Type
 
-| Status | Visible | Notes |
-|--------|---------|-------|
-| draft | ❌ No | Only owner |
-| pending_approval | ❌ No | Owner & admin |
-| published | ✅ Yes | All users |
-| rejected | ❌ No | Owner see reason |
-| archived | ❌ No | Can unarchive |
-| banned | ❌ No | Permanently |
+| Type | address | lat/lng | region_id |
+|------|---------|---------|-----------|
+| online | Optional | Optional | Optional |
+| retail | **WAJIB** | **WAJIB** | Auto-derived |
+| service | **WAJIB** | **WAJIB** | Auto-derived |
+| food_beverage | **WAJIB** | **WAJIB** | Auto-derived |
+| beauty | **WAJIB** | **WAJIB** | Auto-derived |
+| other | Depends on setting | Depends | Auto-derived if lat/lng provided |
+
+### 10.3 Admin Regional Scope Filter
+
+Admin Regional hanya melihat merchant dari region mereka:
+```sql
+WHERE merchant.region_id = admin.region_id
+-- OR
+WHERE merchant.region_id IS NULL  -- online merchants tidak di-filter by region untuk admin
+```
+
+**Note:** Online merchants (no region) tetap visible ke semua admin untuk moderation purposes.
 
 ---
 
-## 13. USE CASES
+## 11. DIRECTORY SETTINGS RULES
 
-### Use Case 1: Member Pro Create Company & Merchant (Online-only)
+Settings dikelola oleh Superadmin dan berlaku secara global.
 
-```
-Scenario: Ani ingin create toko online Korea
+| Setting Key | Default | Deskripsi |
+|-------------|---------|-----------|
+| `merchant.require_approval` | `true` | Merchant baru butuh approval admin |
+| `merchant.max_per_member` | `null` | Max merchant per Member Pro (null = unlimited) |
+| `merchant.min_items_before_publish` | `0` | Min item sebelum bisa publish |
+| `merchant.min_images_before_publish` | `1` | Min foto merchant |
+| `item.require_approval` | `false` | Item baru butuh approval |
+| `item.max_per_merchant` | `null` | Max item per merchant |
+| `item.allow_free_price` | `false` | Boleh input harga Rp 0 |
+| `review.allow_reviews` | `true` | Fitur review aktif |
+| `review.require_moderation` | `true` | Review perlu dimoderasi sebelum tampil |
+| `review.waiting_period_days` | `0` | Hari tunggu sebelum boleh review |
+| `inquiry.allow_inquiries` | `true` | Fitur inquiry aktif |
+| `inquiry.auto_close_days` | `30` | Auto-close inquiry setelah N hari |
+| `features.allow_online_only` | `true` | Boleh daftar merchant tanpa lokasi |
+| `features.allow_multiple_categories` | `true` | Merchant bisa pilih > 1 kategori |
+| `location.require_location_for_physical` | `true` | Merchant fisik wajib isi koordinat |
+| `location.auto_derive_region` | `true` | Region di-derive dari lat/lng otomatis |
+| `location.enable_map_view` | `true` | Tampilkan peta di detail merchant |
 
-Step 1: Create Company "Toko Online Korea"
-Step 2: Create Merchant "Online Store"
-        - Type: online
-        - NO address required
-        - Only contact: email, whatsapp
-        
-Step 3: Add items (mix of product & service):
-        - Product: Korean Ginseng, Rp 150k
-        - Product: Korean Cosmetics, Rp 75k
-        - Service: Online consultation, Rp 200-500k
-        
-Step 4: Submit → Published (or pending approval)
-        - Visible to all users
-        - No location filter (karena online)
-```
+---
 
-### Use Case 2: Member Pro Create Merchant (Physical Location)
+## 12. NOTIFICATION RULES
 
-```
-Scenario: Budi create salon Korea dengan lokasi fisik
+| Event | Notif To | Channel |
+|-------|----------|---------|
+| Merchant submitted (pending) | Admin (regional jika ada, else Superadmin) | In-app + FCM |
+| Merchant approved | Merchant owner | In-app + FCM |
+| Merchant rejected | Merchant owner | In-app + FCM |
+| Merchant banned | Merchant owner | In-app + FCM |
+| New inquiry received | Merchant owner | In-app + FCM |
+| Inquiry replied | Inquiry sender | In-app + FCM |
+| New review (if moderation ON) | Admin | In-app |
+| Review approved/rejected | Reviewer | In-app |
 
-Step 1: Create Company "PT Salon Korea"
-Step 2: Create Merchant "Salon Jakarta Pusat"
-        - Type: beauty
-        - Address: Jl. Ahmad Yani 123, Jakarta
-        - Lat/Lng: auto-derive region_id = "region_jakarta"
-        - Contact: phone, instagram
-        - Hours: Mon-Sat 10:00-19:00, Sun closed
-        
-Step 3: Add items:
-        - Service: Basic facial, Rp 300-500k, 60 min
-        - Service: Hair treatment, Rp 200-400k, 45 min
-        - Product: Korean skincare, Rp 150k (retail penjualan)
-        
-Step 4: Submit → Published or pending approval
-```
+---
 
-### Use Case 3: User Browse & Review
+## 13. MEDIA / IMAGE UPLOAD RULES
 
 ```
-Scenario: User browse directory
-
-Step 1: Search "salon" atau filter "Beauty"
-Step 2: See merchants list dengan:
-        - Photo
-        - Name & rating
-        - Location (city)
-        - Opening hours (if physical)
-        
-Step 3: Click merchant → detail:
-        - Semua items (product + service mix)
-        - Reviews & rating
-        - Location on map (if physical)
-        - Contact info
-        
-Step 4: Actions:
-        - Save merchant
-        - Leave review
-        - Contact merchant
-        - Share ke social media
+✅ Semua image di-upload terlebih dahulu via /api/v1/mobile/media/upload
+✅ Context: "directory"
+✅ Max file size: 5 MB per file
+✅ Max 5 file per request upload
+✅ Format accepted: JPG, JPEG, PNG, WEBP
+✅ Return: array of CDN URLs
+✅ URLs yang valid digunakan saat create/update merchant atau item
 ```
 
 ---
 
-## 14. RULES & CONSTRAINTS
+## 14. SEARCH & FILTER RULES
 
-### Location Rules:
+### Public Listing Filters:
+
+| Filter | Type | Deskripsi |
+|--------|------|-----------|
+| `q` | Text search | Nama merchant, deskripsi |
+| `category_id` | UUID | Filter by category_master |
+| `type` | Enum | retail, online, service, food_beverage, beauty |
+| `city` | Text | Filter by kota (case-insensitive) |
+| `rating_min` | Float | Minimum rating (1.0–5.0) |
+| `is_open_now` | Boolean | Filter merchant yang sedang buka |
+| `has_product` | Boolean | Merchant yang punya item product |
+| `has_service` | Boolean | Merchant yang punya item service |
+| `sort` | Enum | `rating_desc`, `newest`, `name_asc`, `most_reviewed` |
+
+### Default Sort: `rating_desc` (merchant rating tertinggi muncul pertama)
+
+---
+
+## 15. SEARCH RANKING LOGIC
+
+Merchant di-sort berdasarkan:
+1. Featured merchant (jika `featured_merchant_enabled = true`) → muncul pertama
+2. Rating tertinggi (default sort)
+3. Review count lebih banyak → tiebreaker
+4. Newest created → tiebreaker kedua
+
+---
+
+## 16. DATA RETENTION
 
 ```
-Online-only merchant (type: online):
-  ✅ Address OPTIONAL
-  ✅ Latitude/Longitude OPTIONAL
-  ✅ region_id OPTIONAL
-  ✅ Only need: email, phone, instagram, website
-
-Physical merchant (retail/service/food/beauty):
-  ✅ Address REQUIRED
-  ✅ Latitude/Longitude REQUIRED
-  ✅ region_id AUTO-DERIVED dari lat/lng
-  ✅ Hours RECOMMENDED
-```
-
-### Item Rules:
-
-```
-✅ Product + Service dalam satu table
-✅ Type: "product" atau "service" (wajib)
-✅ Product: price (single), unit, stock (optional)
-✅ Service: price_range, duration_minutes
-✅ Unlimited per merchant (unless limits)
-✅ Image minimum 1, recommended 3+
-✅ Cannot price = 0
-```
-
-### Admin Regional Scope:
-
-```
-Admin region can:
-  ✅ View merchants dalam own region
-  ✅ Approve merchants dalam own region
-  ✅ Ban merchants dalam own region
-  ✅ View analytics per region
-  
-Admin regional cannot:
-  ❌ View merchants dari region lain
-  ❌ Manage global settings
-  ❌ Manage category master
+✅ Review: Permanent (tidak auto-delete)
+✅ Inquiry: Auto-close setelah `auto_close_days`, data tetap
+✅ Favorites: Delete saat user atau merchant dihapus
+✅ Banned merchant: Data tetap di DB, hanya tidak tampil
+✅ Deleted merchant: Cascade delete items, favorites; reviews dan inquiries dipertahankan
 ```
 
 ---
 
-## 15. FUTURE FEATURES
+## 17. FUTURE FEATURES (OUT OF SCOPE MVP)
 
-- ❌ Paid featured merchant
-- ❌ Promote item/product
-- ❌ Transaction system
-- ❌ Merchant dashboard & analytics
-- ❌ Team member management
-- ❌ Inventory tracking
-- ❌ Merchant verification badge
-- ❌ Booking system
-- ❌ Wishlist for items
-- ❌ Live chat
-- ❌ Video items
+- Paid featured merchant / promoted listing
+- Booking/appointment system
+- Transaction & payment
+- Team member management per merchant
+- Inventory tracking & stock alert
+- Merchant verification badge
+- Live chat
+- Wishlist per item (bukan merchant)
+- Video items
+- Analytics dashboard untuk merchant owner
 
 ---
 
-*Dokumen ini menjelaskan business rules Directory module KAI App. Product & Service merged. Region_id optional untuk online merchants. Last updated: 2026-05-28*
+*Directory System Rules v2.0 — KAI App. Last updated: 2026-05-30*
