@@ -35,25 +35,25 @@ Berdasarkan `COMMUNITY_RULES.md` dan `COMMUNITY_DB_SCHEMA.md`.
 
 - **Permission / Benefit yang dibutuhkan:**
 
-| Endpoint | Auth | Benefit / Keterangan |
-|----------|------|---------------------|
-| GET communities (browse) | ✅ Required | member (Standard / Pro) |
-| GET communities/:id | ✅ Required | member |
-| GET communities/mine | ✅ Required | member |
-| POST communities | ✅ Required | `create_community` (benefit Pro) |
-| PATCH communities/:id | ✅ Required | leader, permission `manage_community` |
-| DELETE communities/:id | ✅ Required | leader |
-| POST communities/:id/join | ✅ Required | member |
-| DELETE communities/:id/membership | ✅ Required | member (bukan leader) |
-| GET communities/:id/members | ✅ Required | member komunitas |
-| POST communities/:id/transfer-ownership | ✅ Required | leader |
-| PATCH communities/:id/members/:uid | ✅ Required | `manage_members` |
-| GET / POST / PATCH join-requests | ✅ Required | `manage_members` (kecuali POST oleh pemohon) |
-| GET communities/:id/posts | ✅ Required | member komunitas |
-| POST communities/:id/posts | ✅ Required | anggota aktif, permission `post_content` |
-| DELETE posts/:id | ✅ Required | author ATAU permission `delete_content` |
-| POST media/upload | ✅ Required | anggota aktif |
-| POST posts/:id/like, comments, save, share | ✅ Required | anggota aktif komunitas |
+| Endpoint                                   | Auth       | Benefit / Keterangan                         |
+| ------------------------------------------ | ---------- | -------------------------------------------- |
+| GET communities (browse)                   | ✅ Required | member (Standard / Pro)                      |
+| GET communities/:id                        | ✅ Required | member                                       |
+| GET communities/mine                       | ✅ Required | member                                       |
+| POST communities                           | ✅ Required | `create_community` (benefit Pro)             |
+| PATCH communities/:id                      | ✅ Required | leader, permission `manage_community`        |
+| DELETE communities/:id                     | ✅ Required | leader                                       |
+| POST communities/:id/join                  | ✅ Required | member                                       |
+| DELETE communities/:id/membership          | ✅ Required | member (bukan leader)                        |
+| GET communities/:id/members                | ✅ Required | member komunitas                             |
+| POST communities/:id/transfer-ownership    | ✅ Required | leader                                       |
+| PATCH communities/:id/members/:uid         | ✅ Required | `manage_members`                             |
+| GET / POST / PATCH join-requests           | ✅ Required | `manage_members` (kecuali POST oleh pemohon) |
+| GET communities/:id/posts                  | ✅ Required | member komunitas                             |
+| POST communities/:id/posts                 | ✅ Required | anggota aktif, permission `post_content`     |
+| DELETE posts/:id                           | ✅ Required | author ATAU permission `delete_content`      |
+| POST media/upload                          | ✅ Required | anggota aktif                                |
+| POST posts/:id/like, comments, save, share | ✅ Required | anggota aktif komunitas                      |
 
 > Komunitas **private** hanya bisa dilihat metadata-nya (nama, deskripsi, jumlah anggota) oleh non-anggota; konten/feed terkunci sampai menjadi anggota.
 
@@ -68,6 +68,7 @@ Berdasarkan `COMMUNITY_RULES.md` dan `COMMUNITY_DB_SCHEMA.md`.
   "name": "Komunitas WNI Seoul",
   "slug": "komunitas-wni-seoul",
   "avatar_url": "https://cdn/.../avatar.jpg",
+  "category": { "id": "uuid", "name": "Sosial & Budaya" },
   "visibility": "public",
   "region": { "id": "uuid", "name": "Seoul" },
   "member_count": 1240,
@@ -85,6 +86,7 @@ Berdasarkan `COMMUNITY_RULES.md` dan `COMMUNITY_DB_SCHEMA.md`.
   "slug": "komunitas-wni-seoul",
   "description": "Wadah berbagi info WNI di Seoul dan sekitarnya.",
   "avatar_url": "https://cdn/.../avatar.jpg",
+  "category": { "id": "uuid", "name": "Sosial & Budaya" },
   "visibility": "public",
   "region": { "id": "uuid", "name": "Seoul" },
   "owner": { "id": "uuid", "name": "Budi Santoso", "avatar": "https://cdn/.../u.jpg" },
@@ -190,6 +192,24 @@ Berdasarkan `COMMUNITY_RULES.md` dan `COMMUNITY_DB_SCHEMA.md`.
 
 ## Endpoints — Community
 
+### 0. List Categories
+
+Daftar kategori komunitas yang aktif — dipakai untuk dropdown saat create/edit komunitas dan filter di browse.
+
+- **URL:** `GET /api/v1/mobile/communities/categories`
+- **Auth:** Required (member)
+- **Response 200:**
+```json
+{
+  "data": [
+    { "id": "uuid", "name": "Sosial & Budaya", "slug": "sosial-budaya" },
+    { "id": "uuid", "name": "Pendidikan", "slug": "pendidikan" }
+  ]
+}
+```
+
+---
+
 ### 1. Browse Communities
 
 Daftar komunitas `active`. Filter region & visibility, plus pencarian.
@@ -198,14 +218,15 @@ Daftar komunitas `active`. Filter region & visibility, plus pencarian.
 - **Auth:** Required (member)
 - **Query Params:**
 
-| Param | Type | Required | Default | Keterangan |
-|-------|------|----------|---------|-----------|
-| `q` | string | No | — | Cari nama komunitas (min 2 karakter) |
-| `region_id` | string (UUID) | No | — | Filter region; kosong = semua |
-| `visibility` | string | No | — | `public` \| `private` |
-| `sort` | string | No | `popular` | `popular` (member_count) \| `newest` |
-| `limit` | int | No | 20 | Max: 50 |
-| `offset` | int | No | 0 | — |
+| Param         | Type          | Required | Default   | Keterangan                           |
+| ------------- | ------------- | -------- | --------- | ------------------------------------ |
+| `q`           | string        | No       | —         | Cari nama komunitas (min 2 karakter) |
+| `category_id` | string (UUID) | No       | —         | Filter kategori                      |
+| `region_id`   | string (UUID) | No       | —         | Filter region; kosong = semua        |
+| `visibility`  | string        | No       | —         | `public` \| `private`                |
+| `sort`        | string        | No       | `popular` | `popular` (member_count) \| `newest` |
+| `limit`       | int           | No       | 20        | Max: 50                              |
+| `offset`      | int           | No       | 0         | —                                    |
 
 - **Response 200:**
 ```json
@@ -249,18 +270,20 @@ Komunitas yang diikuti user (status `active`).
   "name": "Komunitas WNI Seoul",
   "description": "Wadah berbagi info WNI di Seoul.",
   "avatar_url": "https://cdn/.../avatar.jpg",
+  "category_id": "uuid",
   "visibility": "public",
   "region_id": "uuid"
 }
 ```
 
-| Field | Type | Required | Keterangan |
-|-------|------|----------|-----------|
-| `name` | string | **Yes** | 3–150 karakter |
-| `description` | string | No | — |
-| `avatar_url` | string | No | Hasil upload media |
-| `visibility` | string | No (default `public`) | `public` \| `private` |
-| `region_id` | string (UUID) | No | Kosong = komunitas global |
+| Field         | Type          | Required              | Keterangan                                     |
+| ------------- | ------------- | --------------------- | ---------------------------------------------- |
+| `name`        | string        | **Yes**               | 3–150 karakter                                 |
+| `description` | string        | No                    | —                                              |
+| `avatar_url`  | string        | No                    | Hasil upload media                             |
+| `category_id` | string (UUID) | **Yes**               | Pilih dari daftar kategori aktif (endpoint #0) |
+| `visibility`  | string        | No (default `public`) | `public` \| `private`                          |
+| `region_id`   | string (UUID) | No                    | Kosong = komunitas global                      |
 
 - **Side effects:** creator auto jadi `leader`, permission disalin dari template, `community_members` (status active) dibuat.
 - **Response 201:** `{ "data": { "...": "CommunityDetailObject" } }`
@@ -273,7 +296,7 @@ Komunitas yang diikuti user (status `active`).
 
 - **URL:** `PATCH /api/v1/mobile/communities/{community_id}`
 - **Auth:** Required — leader (permission `manage_community`)
-- **Request Body (partial):** `name`, `description`, `avatar_url`, `visibility`, `region_id`
+- **Request Body (partial):** `name`, `description`, `avatar_url`, `category_id`, `visibility`, `region_id`
 - **Response 200:** `{ "data": { "...": "CommunityDetailObject" } }`
 - **Response 403:** `{ "message": "Anda tidak punya izin mengubah komunitas ini" }`
 
@@ -325,12 +348,12 @@ Komunitas yang diikuti user (status `active`).
 - **Auth:** Required — anggota komunitas
 - **Query Params:**
 
-| Param | Type | Default | Keterangan |
-|-------|------|---------|-----------|
-| `role` | string | — | Filter `leader` \| `moderator` \| `member` |
-| `q` | string | — | Cari nama anggota |
-| `limit` | int | 20 | Max 50 |
-| `offset` | int | 0 | — |
+| Param    | Type   | Default | Keterangan                                 |
+| -------- | ------ | ------- | ------------------------------------------ |
+| `role`   | string | —       | Filter `leader` \| `moderator` \| `member` |
+| `q`      | string | —       | Cari nama anggota                          |
+| `limit`  | int    | 20      | Max 50                                     |
+| `offset` | int    | 0       | —                                          |
 
 - **Response 200:** array `MemberObject` + `pagination`
 
@@ -357,13 +380,13 @@ Komunitas yang diikuti user (status `active`).
 { "action": "promote" }
 ```
 
-| `action` | Efek |
-|----------|------|
-| `promote` | Member → moderator (assign role) |
-| `demote` | Moderator → member |
-| `kick` | Keluarkan dari komunitas (hapus membership + role) |
-| `ban` | Set `status=banned`, hapus role; tidak bisa re-join |
-| `unban` | Set `status=active` kembali |
+| `action`  | Efek                                                |
+| --------- | --------------------------------------------------- |
+| `promote` | Member → moderator (assign role)                    |
+| `demote`  | Moderator → member                                  |
+| `kick`    | Keluarkan dari komunitas (hapus membership + role)  |
+| `ban`     | Set `status=banned`, hapus role; tidak bisa re-join |
+| `unban`   | Set `status=active` kembali                         |
 
 - **Aturan:** tidak bisa mengubah role leader lewat endpoint ini (pakai transfer-ownership). Moderator tidak bisa mem-promote/ban moderator lain kecuali permission mengizinkan.
 - **Response 200:** `{ "message": "Aksi berhasil diterapkan" }`
@@ -434,10 +457,10 @@ Komunitas yang diikuti user (status `active`).
 }
 ```
 
-| Field | Type | Required | Keterangan |
-|-------|------|----------|-----------|
-| `content` | string | **Yes** | Plain text (tanpa markdown/HTML) |
-| `media` | array | No | Maks **10** objek (hasil upload) |
+| Field     | Type   | Required | Keterangan                       |
+| --------- | ------ | -------- | -------------------------------- |
+| `content` | string | **Yes**  | Plain text (tanpa markdown/HTML) |
+| `media`   | array  | No       | Maks **10** objek (hasil upload) |
 
 - **Side effects:** emit event `new_posts` ke Notification.
 - **Response 201:** `{ "data": { "...": "PostObject" } }`
@@ -512,10 +535,10 @@ Upload gambar untuk dipakai di post/avatar. Dipanggil **sebelum** create post.
 }
 ```
 
-| Field | Type | Required | Keterangan |
-|-------|------|----------|-----------|
-| `content` | string | **Yes** | Plain text |
-| `parent_comment_id` | string (UUID) | No | Diisi untuk reply; **harus** menunjuk komentar top-level |
+| Field               | Type          | Required | Keterangan                                               |
+| ------------------- | ------------- | -------- | -------------------------------------------------------- |
+| `content`           | string        | **Yes**  | Plain text                                               |
+| `parent_comment_id` | string (UUID) | No       | Diisi untuk reply; **harus** menunjuk komentar top-level |
 
 - **Validasi 1 level:** jika `parent_comment_id` menunjuk komentar yang sendirinya sudah reply → `400`.
 - **Side effects:** update `comment_count` post & `reply_count` induk; emit notifikasi `someone_replied`.
@@ -568,17 +591,17 @@ Generate deep link untuk dibagikan keluar (mis. WhatsApp). Menaikkan `share_coun
 
 ## Status Code Reference
 
-| Code | Makna |
-|------|-------|
-| 200 | OK |
-| 201 | Created (community, post, comment, media) |
-| 202 | Accepted (join request private — menunggu approval) |
-| 400 | Bad request (mis. reply ke reply) |
-| 401 | Token tidak valid / kedaluwarsa |
-| 403 | Tidak punya izin / benefit / diblokir |
-| 404 | Resource tidak ditemukan |
-| 409 | Konflik (sudah anggota / sudah ada request) |
-| 422 | Validation error |
+| Code | Makna                                               |
+| ---- | --------------------------------------------------- |
+| 200  | OK                                                  |
+| 201  | Created (community, post, comment, media)           |
+| 202  | Accepted (join request private — menunggu approval) |
+| 400  | Bad request (mis. reply ke reply)                   |
+| 401  | Token tidak valid / kedaluwarsa                     |
+| 403  | Tidak punya izin / benefit / diblokir               |
+| 404  | Resource tidak ditemukan                            |
+| 409  | Konflik (sudah anggota / sudah ada request)         |
+| 422  | Validation error                                    |
 
 ---
 

@@ -12,32 +12,47 @@ Berdasarkan `COMMUNITY_RULES.md` dan `COMMUNITY_DB_SCHEMA.md`. Endpoint mobile (
 
 ## Daftar Isi
 
-1. [Informasi Umum](#informasi-umum)
-2. [Data Models](#data-models)
-3. [Community Endpoints](#community-endpoints)
-   - [B1. List Communities](#b1-list-communities)
-   - [B2. Get Community Detail](#b2-get-community-detail)
-   - [B3. Suspend Community](#b3-suspend-community)
-   - [B4. Unsuspend Community](#b4-unsuspend-community)
-   - [B5. Archive Community](#b5-archive-community)
-   - [B6. Delete Community](#b6-delete-community)
-4. [Orphaned Handling](#orphaned-handling)
-   - [B7. List Orphaned Communities](#b7-list-orphaned-communities)
-   - [B8. Assign New Owner](#b8-assign-new-owner)
-5. [Member Endpoints](#member-endpoints)
-   - [B9. List Members](#b9-list-members)
-   - [B10. Force Remove / Ban Member](#b10-force-remove--ban-member)
-6. [Content Moderation Endpoints](#content-moderation-endpoints)
-   - [B11. List Posts](#b11-list-posts)
-   - [B12. Get Post Detail](#b12-get-post-detail)
-   - [B13. Remove Post](#b13-remove-post)
-   - [B14. Restore Post](#b14-restore-post)
-   - [B15. List Comments of Post](#b15-list-comments-of-post)
-   - [B16. Remove Comment](#b16-remove-comment)
-7. [Statistics](#statistics)
-   - [B17. Community Stats](#b17-community-stats)
-8. [Status Code Reference](#status-code-reference)
-9. [Notification Triggers](#notification-triggers)
+- [API Specification — Community Module (Backoffice)](#api-specification--community-module-backoffice)
+  - [Daftar Isi](#daftar-isi)
+  - [Informasi Umum](#informasi-umum)
+  - [Data Models](#data-models)
+    - [CategoryObject](#categoryobject)
+    - [CommunityAdminListObject](#communityadminlistobject)
+    - [CommunityAdminDetailObject](#communityadmindetailobject)
+    - [AdminMemberObject](#adminmemberobject)
+    - [AdminPostObject](#adminpostobject)
+    - [AdminCommentObject](#admincommentobject)
+    - [PaginationObject](#paginationobject)
+    - [Error Responses](#error-responses)
+  - [Category Endpoints](#category-endpoints)
+    - [B0. List Categories](#b0-list-categories)
+    - [B0a. Create Category](#b0a-create-category)
+    - [B0b. Update Category](#b0b-update-category)
+    - [B0c. Toggle Active Category](#b0c-toggle-active-category)
+  - [Community Endpoints](#community-endpoints)
+    - [B1. List Communities](#b1-list-communities)
+    - [B2. Get Community Detail](#b2-get-community-detail)
+    - [B3. Suspend Community](#b3-suspend-community)
+    - [B4. Unsuspend Community](#b4-unsuspend-community)
+    - [B5. Archive Community](#b5-archive-community)
+    - [B6. Delete Community](#b6-delete-community)
+  - [Orphaned Handling](#orphaned-handling)
+    - [B7. List Orphaned Communities](#b7-list-orphaned-communities)
+    - [B8. Assign New Owner](#b8-assign-new-owner)
+  - [Member Endpoints](#member-endpoints)
+    - [B9. List Members](#b9-list-members)
+    - [B10. Force Remove / Ban Member](#b10-force-remove--ban-member)
+  - [Content Moderation Endpoints](#content-moderation-endpoints)
+    - [B11. List Posts](#b11-list-posts)
+    - [B12. Get Post Detail](#b12-get-post-detail)
+    - [B13. Remove Post](#b13-remove-post)
+    - [B14. Restore Post](#b14-restore-post)
+    - [B15. List Comments of Post](#b15-list-comments-of-post)
+    - [B16. Remove Comment](#b16-remove-comment)
+  - [Statistics](#statistics)
+    - [B17. Community Stats](#b17-community-stats)
+  - [Status Code Reference](#status-code-reference)
+  - [Notification Triggers](#notification-triggers)
 
 ---
 
@@ -61,6 +76,19 @@ Berdasarkan `COMMUNITY_RULES.md` dan `COMMUNITY_DB_SCHEMA.md`. Endpoint mobile (
 
 ## Data Models
 
+### CategoryObject
+```json
+{
+  "id": "uuid",
+  "name": "Sosial & Budaya",
+  "slug": "sosial-budaya",
+  "description": "Komunitas bertema sosial dan kebudayaan.",
+  "is_active": true,
+  "community_count": 34,
+  "created_at": "2026-01-10T08:00:00.000Z"
+}
+```
+
 ### CommunityAdminListObject
 ```json
 {
@@ -68,6 +96,7 @@ Berdasarkan `COMMUNITY_RULES.md` dan `COMMUNITY_DB_SCHEMA.md`. Endpoint mobile (
   "name": "Komunitas WNI Seoul",
   "slug": "komunitas-wni-seoul",
   "owner": { "id": "uuid", "name": "Budi Santoso" },
+  "category": { "id": "uuid", "name": "Sosial & Budaya" },
   "region": { "id": "uuid", "name": "Seoul" },
   "visibility": "public",
   "status": "active",
@@ -87,6 +116,7 @@ Berdasarkan `COMMUNITY_RULES.md` dan `COMMUNITY_DB_SCHEMA.md`. Endpoint mobile (
   "description": "Wadah berbagi info WNI di Seoul.",
   "avatar_url": "https://cdn/.../avatar.jpg",
   "owner": { "id": "uuid", "name": "Budi Santoso", "email": "budi@example.com" },
+  "category": { "id": "uuid", "name": "Sosial & Budaya" },
   "region": { "id": "uuid", "name": "Seoul" },
   "visibility": "public",
   "status": "active",
@@ -161,6 +191,68 @@ Berdasarkan `COMMUNITY_RULES.md` dan `COMMUNITY_DB_SCHEMA.md`. Endpoint mobile (
 
 ---
 
+## Category Endpoints
+
+Superadmin mengelola master data kategori yang dipakai komunitas.
+
+### B0. List Categories
+
+- **URL:** `GET /api/v1/web/communities/categories`
+- **Auth:** Superadmin
+- **Query Params:**
+
+| Param       | Type    | Default | Keterangan              |
+| ----------- | ------- | ------- | ----------------------- |
+| `is_active` | boolean | —       | Filter aktif / nonaktif |
+| `q`         | string  | —       | Cari nama               |
+| `limit`     | int     | 20      | Max 100                 |
+| `offset`    | int     | 0       | —                       |
+
+- **Response 200:** array `CategoryObject` + `pagination`
+
+---
+
+### B0a. Create Category
+
+- **URL:** `POST /api/v1/web/communities/categories`
+- **Auth:** Superadmin
+- **Request Body:**
+```json
+{ "name": "Sosial & Budaya", "description": "Komunitas bertema sosial dan kebudayaan." }
+```
+
+| Field         | Type   | Required | Keterangan             |
+| ------------- | ------ | -------- | ---------------------- |
+| `name`        | string | **Yes**  | Unik, max 100 karakter |
+| `description` | string | No       | —                      |
+
+- **Side effects:** `slug` di-generate otomatis dari `name`; `is_active = true` secara default.
+- **Response 201:** `{ "data": { "...": "CategoryObject" } }`
+- **Response 409:** `{ "message": "Nama kategori sudah dipakai" }`
+
+---
+
+### B0b. Update Category
+
+- **URL:** `PATCH /api/v1/web/communities/categories/{category_id}`
+- **Auth:** Superadmin
+- **Request Body (partial):** `name`, `description`
+- **Response 200:** `{ "data": { "...": "CategoryObject" } }`
+
+---
+
+### B0c. Toggle Active Category
+
+Nonaktifkan atau aktifkan kembali sebuah kategori. Kategori yang nonaktif tidak muncul di dropdown mobile (create/edit komunitas), tapi komunitas yang sudah memakai tetap valid.
+
+- **URL:** `PATCH /api/v1/web/communities/categories/{category_id}/toggle-active`
+- **Auth:** Superadmin
+- **Response 200:** `{ "data": { "id": "uuid", "is_active": false } }`
+
+> **Catatan:** Jangan hard-delete kategori yang masih dipakai komunitas aktif karena ada FK `NOT NULL`. Gunakan toggle-active untuk menonaktifkan.
+
+---
+
 ## Community Endpoints
 
 ### B1. List Communities
@@ -171,16 +263,17 @@ Daftar seluruh komunitas (semua status & visibility) dengan filter.
 - **Auth:** Superadmin
 - **Query Params:**
 
-| Param | Type | Required | Default | Keterangan |
-|-------|------|----------|---------|-----------|
-| `q` | string | No | — | Cari nama / slug |
-| `status` | string | No | — | `active` \| `suspended` \| `archived` \| `orphaned` |
-| `visibility` | string | No | — | `public` \| `private` |
-| `region_id` | string (UUID) | No | — | Filter region |
-| `owner_id` | string (UUID) | No | — | Filter pemilik |
-| `sort` | string | No | `newest` | `newest` \| `popular` \| `most_reported` |
-| `limit` | int | No | 20 | Max: 100 |
-| `offset` | int | No | 0 | — |
+| Param         | Type          | Required | Default  | Keterangan                                          |
+| ------------- | ------------- | -------- | -------- | --------------------------------------------------- |
+| `q`           | string        | No       | —        | Cari nama / slug                                    |
+| `status`      | string        | No       | —        | `active` \| `suspended` \| `archived` \| `orphaned` |
+| `visibility`  | string        | No       | —        | `public` \| `private`                               |
+| `category_id` | string (UUID) | No       | —        | Filter kategori                                     |
+| `region_id`   | string (UUID) | No       | —        | Filter region                                       |
+| `owner_id`    | string (UUID) | No       | —        | Filter pemilik                                      |
+| `sort`        | string        | No       | `newest` | `newest` \| `popular` \| `most_reported`            |
+| `limit`       | int           | No       | 20       | Max: 100                                            |
+| `offset`      | int           | No       | 0        | —                                                   |
 
 - **Response 200:** array `CommunityAdminListObject` + `pagination`
 
@@ -206,9 +299,9 @@ Bekukan komunitas sementara (pelanggaran kebijakan). Komunitas tidak hilang, tet
 { "reason": "Pelanggaran pedoman komunitas — konten SARA." }
 ```
 
-| Field | Type | Required | Keterangan |
-|-------|------|----------|-----------|
-| `reason` | string | **Yes** | Alasan suspend (audit & notifikasi ke leader) |
+| Field    | Type   | Required | Keterangan                                    |
+| -------- | ------ | -------- | --------------------------------------------- |
+| `reason` | string | **Yes**  | Alasan suspend (audit & notifikasi ke leader) |
 
 - **Side effects:** `status = suspended`, simpan `suspended_by`/`suspended_at`/`reason`; notify leader.
 - **Response 200:** `{ "message": "Komunitas dibekukan" }`
@@ -286,13 +379,13 @@ Tugaskan member yang ada sebagai leader baru, kembalikan komunitas ke `active`.
 - **Auth:** Superadmin
 - **Query Params:**
 
-| Param | Type | Default | Keterangan |
-|-------|------|---------|-----------|
-| `role` | string | — | `leader` \| `moderator` \| `member` |
-| `status` | string | — | `active` \| `pending` \| `banned` |
-| `q` | string | — | Cari nama / email |
-| `limit` | int | 20 | Max 100 |
-| `offset` | int | 0 | — |
+| Param    | Type   | Default | Keterangan                          |
+| -------- | ------ | ------- | ----------------------------------- |
+| `role`   | string | —       | `leader` \| `moderator` \| `member` |
+| `status` | string | —       | `active` \| `pending` \| `banned`   |
+| `q`      | string | —       | Cari nama / email                   |
+| `limit`  | int    | 20      | Max 100                             |
+| `offset` | int    | 0       | —                                   |
 
 - **Response 200:** array `AdminMemberObject` + `pagination`
 
@@ -309,11 +402,11 @@ Intervensi platform-level terhadap anggota (mis. user bermasalah lintas komunita
 { "action": "ban", "reason": "Spam berulang." }
 ```
 
-| `action` | Efek |
-|----------|------|
-| `kick` | Keluarkan dari komunitas (hapus membership + role) |
-| `ban` | `status=banned`, hapus role; tidak bisa re-join |
-| `unban` | Kembalikan ke `active` |
+| `action` | Efek                                               |
+| -------- | -------------------------------------------------- |
+| `kick`   | Keluarkan dari komunitas (hapus membership + role) |
+| `ban`    | `status=banned`, hapus role; tidak bisa re-join    |
+| `unban`  | Kembalikan ke `active`                             |
 
 - **Catatan:** berbeda dari endpoint mobile (#11), superadmin **boleh** menindak leader/moderator. Jika yang di-ban/kick adalah leader → komunitas menjadi `orphaned` (perlu B8).
 - **Response 200:** `{ "message": "Aksi berhasil diterapkan" }`
@@ -330,14 +423,14 @@ Lihat post lintas/dalam komunitas untuk moderasi.
 - **Auth:** Superadmin
 - **Query Params:**
 
-| Param | Type | Default | Keterangan |
-|-------|------|---------|-----------|
-| `community_id` | string (UUID) | — | Filter per komunitas |
-| `author_id` | string (UUID) | — | Filter per penulis |
-| `status` | string | — | `published` \| `removed` |
-| `q` | string | — | Cari isi konten |
-| `limit` | int | 20 | Max 100 |
-| `offset` | int | 0 | — |
+| Param          | Type          | Default | Keterangan               |
+| -------------- | ------------- | ------- | ------------------------ |
+| `community_id` | string (UUID) | —       | Filter per komunitas     |
+| `author_id`    | string (UUID) | —       | Filter per penulis       |
+| `status`       | string        | —       | `published` \| `removed` |
+| `q`            | string        | —       | Cari isi konten          |
+| `limit`        | int           | 20      | Max 100                  |
+| `offset`       | int           | 0       | —                        |
 
 - **Response 200:** array `AdminPostObject` + `pagination`
 
@@ -422,29 +515,29 @@ Ringkasan metrik sebuah komunitas (untuk panel admin).
 
 ## Status Code Reference
 
-| Code | Makna |
-|------|-------|
-| 200 | OK |
-| 400 | Bad request |
-| 401 | Token tidak valid / kedaluwarsa |
-| 403 | Bukan superadmin |
-| 404 | Resource tidak ditemukan |
-| 409 | Konflik status (mis. unsuspend komunitas yang tidak suspended) |
-| 422 | Validation error (mis. `reason` kosong) |
+| Code | Makna                                                          |
+| ---- | -------------------------------------------------------------- |
+| 200  | OK                                                             |
+| 400  | Bad request                                                    |
+| 401  | Token tidak valid / kedaluwarsa                                |
+| 403  | Bukan superadmin                                               |
+| 404  | Resource tidak ditemukan                                       |
+| 409  | Konflik status (mis. unsuspend komunitas yang tidak suspended) |
+| 422  | Validation error (mis. `reason` kosong)                        |
 
 ---
 
 ## Notification Triggers
 
-| Aksi Backoffice | Notifikasi |
-|---|---|
-| B3 Suspend | Ke leader: komunitas dibekukan + alasan |
-| B4 Unsuspend | Ke leader: komunitas aktif kembali |
-| B5 Archive | Ke leader: komunitas diarsipkan |
-| B8 Assign Owner | Ke owner baru: ditetapkan sebagai leader |
-| B10 Ban/Kick | Ke user terdampak (opsional, sesuai kebijakan) |
-| B13 Remove Post | Ke author (opsional) |
-| B16 Remove Comment | Ke author (opsional) |
+| Aksi Backoffice    | Notifikasi                                     |
+| ------------------ | ---------------------------------------------- |
+| B3 Suspend         | Ke leader: komunitas dibekukan + alasan        |
+| B4 Unsuspend       | Ke leader: komunitas aktif kembali             |
+| B5 Archive         | Ke leader: komunitas diarsipkan                |
+| B8 Assign Owner    | Ke owner baru: ditetapkan sebagai leader       |
+| B10 Ban/Kick       | Ke user terdampak (opsional, sesuai kebijakan) |
+| B13 Remove Post    | Ke author (opsional)                           |
+| B16 Remove Comment | Ke author (opsional)                           |
 
 > Semua event dikirim ke modul Notification sesuai `notification-preferences-technical.md`.
 

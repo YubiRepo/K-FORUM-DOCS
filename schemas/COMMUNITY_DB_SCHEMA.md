@@ -8,19 +8,28 @@
 
 ## Daftar Isi
 
-1. [Overview Relasi](#overview-relasi)
-2. [PostgreSQL DDL Schema](#postgresql-ddl-schema)
-   - [1. communities](#1-communities)
-   - [2. community_members](#2-community_members)
-   - [3. community_join_requests](#3-community_join_requests)
-   - [4. community_posts](#4-community_posts)
-   - [5. community_post_likes](#5-community_post_likes)
-   - [6. community_post_comments](#6-community_post_comments)
-   - [7. community_post_saves](#7-community_post_saves)
-3. [Enum Values](#enum-values)
-4. [Golang Structs](#golang-structs)
-5. [Sample Queries](#sample-queries)
-6. [Catatan Integrasi](#catatan-integrasi)
+- [Database Schema — Community Module](#database-schema--community-module)
+  - [Daftar Isi](#daftar-isi)
+  - [Overview Relasi](#overview-relasi)
+  - [PostgreSQL DDL Schema](#postgresql-ddl-schema)
+    - [1. `community_categories`](#1-community_categories)
+    - [2. `communities`](#2-communities)
+    - [3. `community_members`](#3-community_members)
+    - [4. `community_join_requests`](#4-community_join_requests)
+    - [5. `community_posts`](#5-community_posts)
+    - [6. `community_post_likes`](#6-community_post_likes)
+    - [7. `community_post_comments`](#7-community_post_comments)
+    - [8. `community_post_saves`](#8-community_post_saves)
+  - [Enum Values](#enum-values)
+    - [`communities.visibility`](#communitiesvisibility)
+    - [`communities.status`](#communitiesstatus)
+    - [`community_members.status`](#community_membersstatus)
+    - [`community_join_requests.status`](#community_join_requestsstatus)
+    - [`community_posts.status`](#community_postsstatus)
+    - [`community_post_comments.status`](#community_post_commentsstatus)
+  - [Golang Structs](#golang-structs)
+  - [Sample Queries](#sample-queries)
+  - [Catatan Integrasi](#catatan-integrasi)
 
 ---
 
@@ -35,6 +44,9 @@ users (auth module)
   ├── community_post_likes    (like, toggle)
   ├── community_post_comments (komentar, 1 level reply)
   └── community_post_saves    (bookmark)
+
+community_categories          (master kategori, dikelola superadmin)
+  └── communities.category_id (NOT NULL, FK)
 
 communities
   ├── community_members
@@ -59,7 +71,30 @@ community_role_permissions_template (default saat create)
 
 ## PostgreSQL DDL Schema
 
-### 1. `communities`
+### 1. `community_categories`
+
+Master data kategori komunitas. Hanya Superadmin yang bisa membuat, mengubah, dan menonaktifkan kategori. Leader memilih dari daftar aktif saat membuat atau mengedit komunitas.
+
+```sql
+CREATE TABLE community_categories (
+  id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  name        VARCHAR(100) NOT NULL,
+  slug        VARCHAR(120) NOT NULL UNIQUE,
+  description TEXT         NULL,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX idx_comm_categories_slug ON community_categories (slug);
+CREATE INDEX idx_comm_categories_active ON community_categories (is_active);
+```
+
+> Kategori yang di-nonaktifkan (`is_active = false`) tidak muncul di dropdown create/edit komunitas, tetapi komunitas yang sudah terlanjur memakai kategori tersebut tetap valid. Jangan hapus hard kategori yang sedang dipakai komunitas aktif.
+
+---
+
+### 2. `communities`
 
 Entitas inti komunitas.
 
@@ -71,6 +106,7 @@ CREATE TABLE communities (
   description   TEXT         NULL,
   avatar_url    VARCHAR(500) NULL,
   owner_id      UUID         NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  category_id   UUID         NOT NULL REFERENCES community_categories(id) ON DELETE RESTRICT,
   region_id     UUID         NULL REFERENCES regions(id) ON DELETE SET NULL,
   visibility    VARCHAR(20)  NOT NULL DEFAULT 'public',  -- public | private
   status        VARCHAR(20)  NOT NULL DEFAULT 'active',   -- active | suspended | archived | orphaned
@@ -81,11 +117,12 @@ CREATE TABLE communities (
 
 CREATE UNIQUE INDEX idx_communities_slug ON communities (slug);
 CREATE INDEX idx_communities_owner       ON communities (owner_id);
+CREATE INDEX idx_communities_category    ON communities (category_id);
 CREATE INDEX idx_communities_region      ON communities (region_id) WHERE region_id IS NOT NULL;
 CREATE INDEX idx_communities_status_vis  ON communities (status, visibility);
 ```
 
-### 2. `community_members`
+### 3. `community_members`
 
 Status keanggotaan. **Bukan** tempat menyimpan role.
 
@@ -107,7 +144,7 @@ CREATE INDEX idx_comm_members_user      ON community_members (user_id);
 CREATE INDEX idx_comm_members_community ON community_members (community_id, status);
 ```
 
-### 3. `community_join_requests`
+### 4. `community_join_requests`
 
 Hanya untuk komunitas private.
 
@@ -131,7 +168,7 @@ CREATE UNIQUE INDEX idx_comm_join_unique_pending
 CREATE INDEX idx_comm_join_community ON community_join_requests (community_id, status);
 ```
 
-### 4. `community_posts`
+### 5. `community_posts`
 
 Konten/feed komunitas. Interaksi (like, comment, save) ada di tabel #5–#7.
 
@@ -177,7 +214,7 @@ CREATE INDEX idx_comm_posts_author ON community_posts (author_id);
 
 > **Counter denormalized:** `like_count`, `comment_count`, `save_count`, `share_count` di-increment/decrement saat aksi terjadi, supaya feed tidak perlu `COUNT(*)` tiap load. Update dilakukan dalam transaksi yang sama dengan insert/delete aksi terkait.
 
-### 5. `community_post_likes`
+### 6. `community_post_likes`
 
 Satu user maksimal satu like per post (toggle).
 
@@ -194,7 +231,7 @@ CREATE INDEX idx_comm_likes_post ON community_post_likes (post_id);
 CREATE INDEX idx_comm_likes_user ON community_post_likes (user_id);
 ```
 
-### 6. `community_post_comments`
+### 7. `community_post_comments`
 
 Komentar dengan **maksimal 1 level reply**. Komentar top-level punya `parent_comment_id = NULL`; reply mengisi `parent_comment_id`. Reply terhadap reply tidak diizinkan (divalidasi di service layer).
 
@@ -226,7 +263,7 @@ CREATE INDEX idx_comm_comments_parent
 
 > **Enforce 1 level:** sebelum insert reply, service cek bahwa `parent_comment_id` menunjuk komentar yang `parent_comment_id`-nya NULL. Jika tidak, tolak (`400`).
 
-### 7. `community_post_saves`
+### 8. `community_post_saves`
 
 Bookmark/simpan post per user.
 
@@ -249,57 +286,58 @@ CREATE INDEX idx_comm_saves_user ON community_post_saves (user_id, created_at DE
 ## Enum Values
 
 ### `communities.visibility`
-| Value | Keterangan |
-|---|---|
-| `public` | Siapa saja bisa auto-join |
-| `private` | Join lewat approval |
+| Value     | Keterangan                |
+| --------- | ------------------------- |
+| `public`  | Siapa saja bisa auto-join |
+| `private` | Join lewat approval       |
 
 ### `communities.status`
-| Value | Keterangan |
-|---|---|
-| `active` | Normal beroperasi |
-| `suspended` | Dibekukan superadmin (sementara) |
-| `archived` | Diarsipkan / dihapus lunak |
-| `orphaned` | Tanpa leader (owner hapus akun) — perlu intervensi superadmin |
+| Value       | Keterangan                                                    |
+| ----------- | ------------------------------------------------------------- |
+| `active`    | Normal beroperasi                                             |
+| `suspended` | Dibekukan superadmin (sementara)                              |
+| `archived`  | Diarsipkan / dihapus lunak                                    |
+| `orphaned`  | Tanpa leader (owner hapus akun) — perlu intervensi superadmin |
 
 ### `community_members.status`
-| Value | Keterangan |
-|---|---|
-| `active` | Anggota aktif |
-| `pending` | Menunggu approval (private) |
-| `banned` | Diblokir, tidak bisa re-join |
+| Value     | Keterangan                   |
+| --------- | ---------------------------- |
+| `active`  | Anggota aktif                |
+| `pending` | Menunggu approval (private)  |
+| `banned`  | Diblokir, tidak bisa re-join |
 
 ### `community_join_requests.status`
-| Value | Keterangan |
-|---|---|
-| `pending` | Menunggu review |
+| Value      | Keterangan              |
+| ---------- | ----------------------- |
+| `pending`  | Menunggu review         |
 | `approved` | Disetujui → jadi member |
-| `rejected` | Ditolak |
+| `rejected` | Ditolak                 |
 
 ### `community_posts.status`
-| Value | Keterangan |
-|---|---|
-| `published` | Tampil di feed |
-| `removed` | Dihapus moderasi |
+| Value       | Keterangan       |
+| ----------- | ---------------- |
+| `published` | Tampil di feed   |
+| `removed`   | Dihapus moderasi |
 
 ### `community_post_comments.status`
-| Value | Keterangan |
-|---|---|
-| `published` | Tampil |
-| `removed` | Dihapus moderasi / penulis |
+| Value       | Keterangan                 |
+| ----------- | -------------------------- |
+| `published` | Tampil                     |
+| `removed`   | Dihapus moderasi / penulis |
 
 ---
 
 ## Golang Structs
 
 ```go
-type Community struct {
+
     ID          string     `db:"id"          json:"id"`
     Name        string     `db:"name"        json:"name"`
     Slug        string     `db:"slug"        json:"slug"`
     Description *string    `db:"description" json:"description"`
     AvatarURL   *string    `db:"avatar_url"  json:"avatar_url"`
     OwnerID     string     `db:"owner_id"    json:"owner_id"`
+    CategoryID  string     `db:"category_id" json:"category_id"`
     RegionID    *string    `db:"region_id"   json:"region_id"`
     Visibility  string     `db:"visibility"  json:"visibility"`
     Status      string     `db:"status"      json:"status"`
@@ -307,8 +345,6 @@ type Community struct {
     CreatedAt   time.Time  `db:"created_at"  json:"created_at"`
     UpdatedAt   time.Time  `db:"updated_at"  json:"updated_at"`
 }
-
-type CommunityMember struct {
     ID          string     `db:"id"           json:"id"`
     CommunityID string     `db:"community_id" json:"community_id"`
     UserID      string     `db:"user_id"      json:"user_id"`
@@ -390,12 +426,16 @@ type CommunityPostSave struct {
 ## Sample Queries
 
 ```sql
--- Q1: Browse komunitas public + private (active), dengan filter region opsional
+-- Q0: Daftar kategori aktif (untuk dropdown create/edit komunitas)
+SELECT id, name, slug FROM community_categories WHERE is_active = TRUE ORDER BY name ASC;
+
+-- Q1: Browse komunitas public + private (active), dengan filter region & category opsional
 SELECT * FROM communities
 WHERE status = 'active'
   AND ($1::uuid IS NULL OR region_id = $1)
+  AND ($2::uuid IS NULL OR category_id = $2)
 ORDER BY member_count DESC
-LIMIT $2 OFFSET $3;
+LIMIT $3 OFFSET $4;
 
 -- Q2: Cek apakah user sudah anggota (dan statusnya)
 SELECT status FROM community_members
