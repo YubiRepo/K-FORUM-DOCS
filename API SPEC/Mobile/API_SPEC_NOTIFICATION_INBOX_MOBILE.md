@@ -17,7 +17,7 @@ Dokumentasi API untuk mobile mengambil, membaca, dan menerima notifikasi in-app 
 
 | Method | Path | Deskripsi |
 |--------|------|-----------|
-| GET | `/notifications` | List notifikasi belum dibaca |
+| GET | `/notifications` | List 20 notifikasi terbaru |
 | GET | `/notifications/unread-count` | Jumlah notifikasi belum dibaca |
 | PATCH | `/notifications/:id/read` | Tandai satu notifikasi sebagai dibaca |
 | PATCH | `/notifications/read-all` | Tandai semua notifikasi sebagai dibaca |
@@ -27,7 +27,7 @@ Dokumentasi API untuk mobile mengambil, membaca, dan menerima notifikasi in-app 
 
 ## 1. GET /notifications
 
-Ambil daftar notifikasi yang belum dibaca milik user yang sedang login.
+Ambil 20 notifikasi terbaru milik user yang sedang login, diurutkan dari yang terbaru.
 
 **Method**: GET
 
@@ -44,46 +44,79 @@ Ambil daftar notifikasi yang belum dibaca milik user yang sedang login.
   "data": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440000",
-      "type": "security",
-      "title": "Login Berhasil",
-      "body": "Anda berhasil masuk ke akun K-Forum. Jika bukan Anda, segera amankan akun Anda.",
+      "type": "content",
+      "title": "Post Baru di Komunitas Pecinta Kereta",
+      "body": "Budi Santoso: \"Foto perjalanan Argo Bromo kemarin keren banget!\"",
+      "image_url": "https://cdn.kai.id/news/thumb_uuid.jpg",
+      "module": "community",
+      "event_type": "post_new",
+      "entity_id": "post-uuid-123",
+      "click_action": "kai://communities/comm-uuid/posts/post-uuid-123",
+      "bypass": false,
+      "extra": {
+        "community_id": "comm-uuid",
+        "community_name": "Pecinta Kereta"
+      },
       "is_read": false,
-      "reference_id": null,
-      "reference_type": null,
       "created_at": "2026-06-04T10:30:00+07:00",
       "read_at": null
     },
     {
       "id": "660e8400-e29b-41d4-a716-446655440001",
-      "type": "social",
-      "title": "Post kamu disukai",
-      "body": "budi_santoso menyukai post kamu",
-      "is_read": false,
-      "reference_id": "post-uuid-123",
-      "reference_type": "post",
+      "type": "security",
+      "title": "⚠️ Peringatan Darurat",
+      "body": "Terdapat gangguan layanan di area Jakarta Pusat",
+      "module": "announcement",
+      "event_type": "critical_published",
+      "entity_id": "ann-uuid-456",
+      "click_action": "kai://announcements/ann-uuid-456",
+      "bypass": true,
+      "extra": {
+        "priority": "CRITICAL",
+        "type": "disaster"
+      },
+      "is_read": true,
       "created_at": "2026-06-04T09:15:00+07:00",
-      "read_at": null
+      "read_at": "2026-06-04T09:20:00+07:00"
     }
   ],
   "meta": null
 }
 ```
 
-**Catatan**:
-- Hanya mengembalikan notifikasi dengan `status = 'unread'`
-- Diurutkan dari yang terbaru (`created_at DESC`)
-- Tidak ada pagination — ambil semua yang belum dibaca
-- `is_read` selalu `false` di endpoint ini (sudah difilter unread); field tersedia untuk konsistensi saat WS push juga mengandung data yang sama
+### Field Reference
+
+| Field | Type | Keterangan |
+|-------|------|------------|
+| `id` | string (UUID) | ID delivery attempt in-app (gunakan ini untuk mark read) |
+| `type` | string | Tipe notifikasi — lihat tabel di bawah |
+| `title` | string | Judul notifikasi |
+| `body` | string | Isi notifikasi |
+| `image_url` | string \| absent | URL gambar/thumbnail. Tidak ada jika notif tidak punya visual |
+| `module` | string | Modul sumber: `announcement`, `news`, `community`, `event`, `qna`, `subscription`, `region` |
+| `event_type` | string | Event spesifik dalam modul — sama persis dengan `event_type` di FCM data payload |
+| `entity_id` | string | UUID entitas terkait (article, community, event, dll). `""` jika tidak ada |
+| `click_action` | string | Deep link navigasi Flutter — sama persis dengan `click_action` di FCM data payload |
+| `bypass` | bool | `true` jika notif ini bypass preferences user (notif kritis) |
+| `extra` | object \| absent | Data tambahan per event type. Map key-value string. Absent jika tidak ada |
+| `is_read` | bool | `true` jika sudah dibaca |
+| `created_at` | string (RFC3339) | Waktu notifikasi diterima |
+| `read_at` | string (RFC3339) \| null | Waktu dibaca. `null` jika belum dibaca |
 
 **Tipe notifikasi (`type`)**:
 | Value | Deskripsi |
 |-------|-----------|
 | `security` | Aktivitas keamanan (login, perubahan password) |
-| `social` | Interaksi sosial (like, komentar, mention) |
-| `content` | Konten baru (post komunitas, pengumuman) |
-| `system` | Pesan sistem (broadcast admin) |
+| `social` | Interaksi sosial |
+| `content` | Konten baru (post komunitas, berita, pengumuman) |
+| `system` | Pesan sistem |
 | `reminder` | Pengingat (event, jadwal) |
 | `marketing` | Promosi dan informasi produk |
+
+**Catatan**:
+- Mengembalikan **semua** notifikasi (read & unread), maksimal 20 terbaru
+- Field `module`, `event_type`, `entity_id`, `click_action`, `bypass` konsisten dengan structure FCM `data` payload — Flutter bisa pakai handler yang sama untuk FCM push dan inbox
+- Field `extra` di inbox adalah JSON object (bukan JSON-encoded string seperti di FCM) — tidak perlu `jsonDecode`
 
 **Response (401 Unauthorized)**:
 ```json
@@ -138,7 +171,7 @@ Tandai satu notifikasi sebagai sudah dibaca.
 **Path Parameters**:
 | Parameter | Type | Deskripsi |
 |-----------|------|-----------|
-| `id` | string (UUID) | ID notifikasi |
+| `id` | string (UUID) | ID notifikasi (field `id` dari response GET /notifications) |
 
 **Request Body**: Tidak diperlukan
 
@@ -235,33 +268,34 @@ Client                          Server
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
-  "type": "social",
-  "title": "Post kamu disukai",
-  "body": "budi_santoso menyukai post kamu",
-  "reference_id": "post-uuid-123",
-  "reference_type": "post",
+  "type": "content",
+  "title": "Post Baru di Komunitas Pecinta Kereta",
+  "body": "Budi Santoso: \"Foto perjalanan Argo Bromo kemarin keren banget!\"",
+  "reference_id": "comm-uuid",
+  "reference_type": "community",
   "payload": {
-    "community_id": "comm-uuid-456",
-    "post_id": "post-uuid-123"
+    "community_id": "comm-uuid",
+    "community_name": "Pecinta Kereta"
   },
   "created_at": "2026-06-04T10:30:00Z"
 }
 ```
 
-**Field payload per event type**:
-| type | payload keys |
-|------|-------------|
-| `security` | `ip_address`, `event` |
-| `social` (post liked) | `community_id`, `post_id` |
-| `social` (commented) | `community_id`, `post_id`, `comment_id` |
-| `social` (replied) | `community_id`, `post_id`, `comment_id` |
-| `social` (mentioned) | `community_id`, `post_id`, `context` |
-| `system` (announcement) | `announcement_id` |
+| Field | Type | Keterangan |
+|-------|------|------------|
+| `id` | string (UUID) | ID delivery attempt — gunakan untuk PATCH /:id/read |
+| `type` | string | Tipe notifikasi |
+| `title` | string | Judul |
+| `body` | string | Isi |
+| `reference_id` | string \| absent | ID referensi entitas terkait |
+| `reference_type` | string \| absent | Tipe referensi (`community`, `post`, dll.) |
+| `payload` | object \| absent | Data tambahan (isi `extra` dari notifikasi) |
+| `created_at` | string (RFC3339) | Waktu notifikasi dibuat |
 
 **Catatan Penting**:
 - Server **hanya mengirim**, client tidak perlu kirim data (kecuali ping keepalive)
 - Jika koneksi WS terputus, notifikasi tetap tersimpan di DB — client cukup hit `GET /notifications` saat reconnect untuk catch-up
-- Pesan broadcast (announcement) dikirim ke semua user yang terkoneksi, tapi **tidak** tersimpan di tabel `notifications` — user lihat via `/announcements`
+- WS message menggunakan format `payload` (object), sedangkan REST inbox menggunakan field flat (`module`, `event_type`, dst.)
 
 **Contoh koneksi (wscat)**:
 ```bash
@@ -276,18 +310,33 @@ wscat -c "ws://localhost:8888/api/v1/mobile/ws/notifications" \
 ```
 App Launch / User Login
   │
-  ├─ 1. Hit GET /notifications           ← Load semua unread dari DB
+  ├─ 1. Hit GET /notifications              ← Load 20 notif terbaru dari DB
   ├─ 2. Hit GET /notifications/unread-count ← Update badge count
-  ├─ 3. Connect WS /ws/notifications     ← Listen real-time
+  ├─ 3. Connect WS /ws/notifications        ← Listen real-time
   │
   │  [Saat WS menerima pesan]
-  ├─ 4. Append ke list lokal             ← Tidak perlu re-fetch
+  ├─ 4. Append ke list lokal                ← Tidak perlu re-fetch
   ├─ 5. Update badge count (count + 1)
   │
   │  [User tap notifikasi]
-  ├─ 6. PATCH /notifications/:id/read    ← Mark dibaca
-  ├─ 7. Remove dari list lokal / set is_read: true
+  ├─ 6. Baca click_action dari item         ← Navigasi ke deep link
+  ├─ 7. PATCH /notifications/:id/read       ← Mark dibaca
+  ├─ 8. Set is_read: true di list lokal
   │
   │  [User tap "baca semua"]
-  └─ 8. PATCH /notifications/read-all   ← Mark semua dibaca
+  └─ 9. PATCH /notifications/read-all       ← Mark semua dibaca
+```
+
+## Konsistensi dengan FCM Push
+
+Field `module`, `event_type`, `entity_id`, `click_action`, `bypass` di REST response **identik** dengan field `data` di FCM push message. Flutter dapat menggunakan handler navigasi yang sama:
+
+```dart
+// Berlaku untuk FCM push AND inbox REST item
+void handleNotificationTap(String clickAction) {
+  NavigationService.navigateTo(clickAction);
+}
+
+// FCM push: extra adalah JSON-encoded string → perlu jsonDecode
+// Inbox REST: extra adalah JSON object → langsung pakai
 ```
