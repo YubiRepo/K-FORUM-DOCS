@@ -271,6 +271,12 @@ Client                          Server
   "type": "content",
   "title": "Post Baru di Komunitas Pecinta Kereta",
   "body": "Budi Santoso: \"Foto perjalanan Argo Bromo kemarin keren banget!\"",
+  "image_url": "https://cdn.kai.id/news/thumb_uuid.jpg",
+  "module": "community",
+  "event_type": "post_new",
+  "entity_id": "post-uuid-123",
+  "click_action": "kai://communities/comm-uuid/posts/post-uuid-123",
+  "bypass": false,
   "reference_id": "comm-uuid",
   "reference_type": "community",
   "payload": {
@@ -287,15 +293,21 @@ Client                          Server
 | `type` | string | Tipe notifikasi |
 | `title` | string | Judul |
 | `body` | string | Isi |
-| `reference_id` | string \| absent | ID referensi entitas terkait |
-| `reference_type` | string \| absent | Tipe referensi (`community`, `post`, dll.) |
-| `payload` | object \| absent | Data tambahan (isi `extra` dari notifikasi) |
+| `image_url` | string \| absent | URL gambar/thumbnail |
+| `module` | string | Modul sumber notif — sama dengan FCM `data.module` |
+| `event_type` | string | Event spesifik — sama dengan FCM `data.event_type` |
+| `entity_id` | string | UUID entitas terkait — sama dengan FCM `data.entity_id` |
+| `click_action` | string | Deep link navigasi — sama dengan FCM `data.click_action` |
+| `bypass` | bool | `true` jika notif bypass preferences |
+| `reference_id` | string \| absent | ID referensi entitas (field lama, tetap ada) |
+| `reference_type` | string \| absent | Tipe referensi (field lama, tetap ada) |
+| `payload` | object \| absent | Map extra data dari notifikasi (field lama, tetap ada) |
 | `created_at` | string (RFC3339) | Waktu notifikasi dibuat |
 
 **Catatan Penting**:
 - Server **hanya mengirim**, client tidak perlu kirim data (kecuali ping keepalive)
 - Jika koneksi WS terputus, notifikasi tetap tersimpan di DB — client cukup hit `GET /notifications` saat reconnect untuk catch-up
-- WS message menggunakan format `payload` (object), sedangkan REST inbox menggunakan field flat (`module`, `event_type`, dst.)
+- Field `module`, `event_type`, `entity_id`, `click_action`, `bypass` konsisten dengan FCM push dan REST inbox — Flutter pakai handler navigasi yang sama untuk ketiga channel
 
 **Contoh koneksi (wscat)**:
 ```bash
