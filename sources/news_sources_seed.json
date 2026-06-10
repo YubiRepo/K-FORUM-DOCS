@@ -1,0 +1,2129 @@
+{
+  "_meta": {
+    "description": "News sources seed data — converted from production JS config to KAI DB schema (news_sources + source_selectors + source_categories). Selectors are as provided/validated; main content uses Readability with these as fallback.",
+    "version": "1.0.0",
+    "generated_at": "2026-06-04",
+    "total_sources": 27,
+    "total_categories": 227,
+    "notes": [
+      "Indonesian sources: original_language='id'. Korean sources (Korea Times, Yonhap, Korea Herald, KCNA): original_language='en' with auto_translate=true.",
+      "Category value starting with http:// goes to url_override; otherwise url_suffix (empty string means feed = base_url).",
+      "ai_cleanup=true for sources with noisy HTML (Detik, CNN, Okezone, Tribun, detikFinance).",
+      "auto_publish=false by default (review as draft first). Schedules are staggered to avoid simultaneous scraping."
+    ]
+  },
+  "sources": [
+    {
+      "key": "antara",
+      "name": "Antara News",
+      "base_url": "https://www.antaranews.com/rss/",
+      "original_language": "id",
+      "schedule": "0 */4 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": "article, .post-content, .entry-content, .detail-content",
+        "author_selector": ".author, .writer, .byline, .text-muted, .reporter",
+        "tags_selector": ".tags a, .tag-links a, .detail-tag a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "terkini.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "politik",
+          "url_suffix": "politik.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "hukum",
+          "url_suffix": "hukum",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "ekonomi",
+          "url_suffix": "ekonomi.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "metro",
+          "url_suffix": "metro",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bola",
+          "url_suffix": "sepakbola.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "olahraga",
+          "url_suffix": "olahraga",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "humaniora",
+          "url_suffix": "humaniora",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "tekno",
+          "url_suffix": "tekno.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "otomotif",
+          "url_suffix": "otomotif.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "hiburan",
+          "url_suffix": "hiburan.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "lifestyle",
+          "url_suffix": "lifestyle.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "dunia",
+          "url_suffix": "dunia",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "warta_bumi",
+          "url_suffix": "warta-bumi",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "rilis_pers",
+          "url_suffix": "rilis-pers",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "cnn",
+      "name": "CNN Indonesia",
+      "base_url": "https://www.cnnindonesia.com/",
+      "original_language": "id",
+      "schedule": "30 */2 * * *",
+      "auto_publish": false,
+      "ai_cleanup": true,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".detail-text, #detikdetailtext",
+        "author_selector": ".author, .writer",
+        "tags_selector": ".detail-tag a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "nasional",
+          "url_suffix": "nasional/rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "internasional",
+          "url_suffix": "internasional/rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "ekonomi",
+          "url_suffix": "ekonomi/rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "olahraga",
+          "url_suffix": "olahraga/rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "teknologi",
+          "url_suffix": "teknologi/rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "hiburan",
+          "url_suffix": "hiburan/rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "gaya_hidup",
+          "url_suffix": "gaya-hidup/rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "cnbc",
+      "name": "CNBC Indonesia",
+      "base_url": "https://www.cnbcindonesia.com/",
+      "original_language": "id",
+      "schedule": "15 */3 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".detail_text",
+        "author_selector": ".author, .writer",
+        "tags_selector": ".detail_tag a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "news/rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "investment",
+          "url_suffix": "investment/rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "market",
+          "url_suffix": "market/rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "entrepreneur",
+          "url_suffix": "entrepreneur/rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "syariah",
+          "url_suffix": "syariah/rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "tech",
+          "url_suffix": "tech/rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "lifestyle",
+          "url_suffix": "lifestyle/rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "opini",
+          "url_suffix": "opini/rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "profil",
+          "url_suffix": "profil/rss",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "republika",
+      "name": "Republika",
+      "base_url": "https://www.republika.co.id/rss/",
+      "original_language": "id",
+      "schedule": "45 */4 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".detail-konten, .article-content",
+        "author_selector": ".author, .writer",
+        "tags_selector": ".tag a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "nasional",
+          "url_suffix": "nasional",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "hukum",
+          "url_suffix": "nasional/hukum",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "politik",
+          "url_suffix": "nasional/politik",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "internasional",
+          "url_suffix": "internasional",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "ekonomi",
+          "url_suffix": "ekonomi",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "sepakbola",
+          "url_suffix": "sepakbola",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "leisure",
+          "url_suffix": "leisure",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "khazanah",
+          "url_suffix": "khazanah",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "islam",
+          "url_suffix": "dunia-islam",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "umroh",
+          "url_suffix": "dunia-islam/umroh-haji",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "halal",
+          "url_suffix": "dunia-islam/halal",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "tempo",
+      "name": "Tempo",
+      "base_url": "https://rss.tempo.co/",
+      "original_language": "id",
+      "schedule": "0 */6 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".detail-konten, .article-content",
+        "author_selector": ".author, .writer",
+        "tags_selector": ".tag a",
+        "extra_fields": {
+          "multipage": true
+        }
+      },
+      "categories": [
+        {
+          "category_key": "nasional",
+          "url_suffix": "nasional",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bisnis",
+          "url_suffix": "bisnis",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "metro",
+          "url_suffix": "metro",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "dunia",
+          "url_suffix": "dunia",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bola",
+          "url_suffix": "bola",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "cantik",
+          "url_suffix": "cantik",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "tekno",
+          "url_suffix": "tekno",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "otomotif",
+          "url_suffix": "otomotif",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "seleb",
+          "url_suffix": "seleb",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "gaya",
+          "url_suffix": "gaya",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "travel",
+          "url_suffix": "travel",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "difabel",
+          "url_suffix": "difabel",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "creativelab",
+          "url_suffix": "creativelab",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "inggris",
+          "url_suffix": "inggris",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "merdeka",
+      "name": "Merdeka",
+      "base_url": "https://www.merdeka.com/feed/",
+      "original_language": "id",
+      "schedule": "20 */4 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".mdk-body-artikel, .article-content",
+        "author_selector": ".reporter, .writer",
+        "tags_selector": ".tag a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "jakarta",
+          "url_suffix": "jakarta",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "dunia",
+          "url_suffix": "dunia",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "gaya",
+          "url_suffix": "gaya",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "olahraga",
+          "url_suffix": "olahraga",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "teknologi",
+          "url_suffix": "teknologi",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "otomotif",
+          "url_suffix": "otomotif",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "sehat",
+          "url_suffix": "sehat",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "khas",
+          "url_suffix": "khas",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "jabar",
+          "url_suffix": "jabar",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "jatim",
+          "url_suffix": "jatim",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "jateng",
+          "url_suffix": "jateng",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "sumut",
+          "url_suffix": "sumut",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "okezone",
+      "name": "Okezone",
+      "base_url": "https://sindikasi.okezone.com/index.php/rss/",
+      "original_language": "id",
+      "schedule": "10 */4 * * *",
+      "auto_publish": false,
+      "ai_cleanup": true,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".read, .content-read, .detail-text",
+        "author_selector": ".reporter, .writer",
+        "tags_selector": ".tag a",
+        "extra_fields": {
+          "thumbnail": "imglink"
+        }
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "0/RSS2.0",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "celebrity",
+          "url_suffix": "13/RSS2.0",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "sports",
+          "url_suffix": "2/RSS2.0",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "otomotif",
+          "url_suffix": "15/RSS2.0",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "economy",
+          "url_suffix": "11/RSS2.0",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "techno",
+          "url_suffix": "16/RSS2.0",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "lifestyle",
+          "url_suffix": "12/RSS2.0",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bola",
+          "url_suffix": "14/RSS2.0",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "sindonews",
+      "name": "Sindonews",
+      "base_url": "https://www.sindonews.com/feed/",
+      "original_language": "id",
+      "schedule": "25 */3 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": "#content, .article-content",
+        "author_selector": ".author, .writer",
+        "tags_selector": ".tag a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "nasional",
+          "url_suffix": "nasional",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "metro",
+          "url_suffix": "metro",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "ekonomi",
+          "url_suffix": "ekonomi",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "international",
+          "url_suffix": "international",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "daerah",
+          "url_suffix": "daerah",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "sports",
+          "url_suffix": "sports",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "otomotif",
+          "url_suffix": "otomotif",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "tekno",
+          "url_suffix": "tekno",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "sains",
+          "url_suffix": "sains",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "edukasi",
+          "url_suffix": "edukasi",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "lifestyle",
+          "url_suffix": "lifestyle",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "kalam",
+          "url_suffix": "kalam",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "suara",
+      "name": "Suara.com",
+      "base_url": "https://www.suara.com/rss/",
+      "original_language": "id",
+      "schedule": "35 */4 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".detail-content, .article-content",
+        "author_selector": ".author-name, .writer",
+        "tags_selector": ".tag a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bisnis",
+          "url_suffix": "bisnis",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bola",
+          "url_suffix": "bola",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "lifestyle",
+          "url_suffix": "lifestyle",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "entertainment",
+          "url_suffix": "entertainment",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "otomotif",
+          "url_suffix": "otomotif",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "tekno",
+          "url_suffix": "tekno",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "health",
+          "url_suffix": "health",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "tribun",
+      "name": "Tribun News",
+      "base_url": "https://www.tribunnews.com/rss/",
+      "original_language": "id",
+      "schedule": "0 */3 * * *",
+      "auto_publish": false,
+      "ai_cleanup": true,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".txt-article, .article-content",
+        "author_selector": "#penulis, .writer",
+        "tags_selector": ".tag a",
+        "extra_fields": {
+          "multipage": true,
+          "next_param": "page=all"
+        }
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bisnis",
+          "url_suffix": "bisnis",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "superskor",
+          "url_suffix": "superskor",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "sport",
+          "url_suffix": "sport",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "seleb",
+          "url_suffix": "seleb",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "lifestyle",
+          "url_suffix": "lifestyle",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "travel",
+          "url_suffix": "travel",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "parapuan",
+          "url_suffix": "parapuan",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "otomotif",
+          "url_suffix": "otomotif",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "techno",
+          "url_suffix": "techno",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "kesehatan",
+          "url_suffix": "kesehatan",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "kumparan",
+      "name": "Kumparan",
+      "base_url": "https://lapi.kumparan.com/v3.0/rss/",
+      "original_language": "id",
+      "schedule": "40 */3 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".detail-content, .article-content",
+        "author_selector": ".author-name, .writer",
+        "tags_selector": ".tag a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "jpnn",
+      "name": "JPNN",
+      "base_url": "https://www.jpnn.com/index.php?mib=rss",
+      "original_language": "id",
+      "schedule": "50 */4 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".content, .article-content",
+        "author_selector": ".author, .writer",
+        "tags_selector": ".tag a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "detik",
+      "name": "Detik.com",
+      "base_url": "https://news.detik.com/rss",
+      "original_language": "id",
+      "schedule": "0 */2 * * *",
+      "auto_publish": false,
+      "ai_cleanup": true,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".detail__body-text, .itp_bodycontent, article.detail",
+        "author_selector": ".detail__author, .author, span[class*=\"author\"]",
+        "tags_selector": ".nav__tags a, .detail__tag a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": null,
+          "url_override": "https://news.detik.com/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "nasional",
+          "url_suffix": null,
+          "url_override": "https://news.detik.com/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "finance",
+          "url_suffix": null,
+          "url_override": "https://finance.detik.com/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "inet",
+          "url_suffix": null,
+          "url_override": "https://inet.detik.com/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "sport",
+          "url_suffix": null,
+          "url_override": "https://sport.detik.com/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bola",
+          "url_suffix": null,
+          "url_override": "https://sport.detik.com/sepakbola/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "otomotif",
+          "url_suffix": null,
+          "url_override": "https://oto.detik.com/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "food",
+          "url_suffix": null,
+          "url_override": "https://food.detik.com/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "health",
+          "url_suffix": null,
+          "url_override": "https://health.detik.com/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "hot",
+          "url_suffix": null,
+          "url_override": "https://hot.detik.com/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "wolipop",
+          "url_suffix": null,
+          "url_override": "https://wolipop.detik.com/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "edu",
+          "url_suffix": null,
+          "url_override": "https://www.detik.com/edu/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "properti",
+          "url_suffix": null,
+          "url_override": "https://www.detik.com/properti/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "travel",
+          "url_suffix": null,
+          "url_override": "https://travel.detik.com/rss",
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "kompas",
+      "name": "Kompas.com",
+      "base_url": "https://www.kompas.com/getrss/",
+      "original_language": "id",
+      "schedule": "0 */3 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".read__content, .article__content, div[class*=\"read__content\"]",
+        "author_selector": ".credit-title-name, .author__name, .read__credit--name",
+        "tags_selector": ".article__tag a, .tag__article a",
+        "extra_fields": {
+          "multipage": true,
+          "next_param": "page=all"
+        }
+      },
+      "categories": [
+        {
+          "category_key": "nasional",
+          "url_suffix": "nasional",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "regional",
+          "url_suffix": "regional",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "internasional",
+          "url_suffix": "internasional",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "megapolitan",
+          "url_suffix": "megapolitan",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bisnis",
+          "url_suffix": "bisniskeuangan",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "kesehatan",
+          "url_suffix": "kesehatan",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "olahraga",
+          "url_suffix": "olahraga",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "perempuan",
+          "url_suffix": "perempuan",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "properti",
+          "url_suffix": "properti",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "sains",
+          "url_suffix": "sains",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "travel",
+          "url_suffix": "travel",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "oase",
+          "url_suffix": "oase",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "otomotif",
+          "url_suffix": "otomotifteknologi",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "edukasi",
+          "url_suffix": "edukasi",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "liputan6",
+      "name": "Liputan6",
+      "base_url": "https://feed.liputan6.com/rss/",
+      "original_language": "id",
+      "schedule": "15 */2 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".article-content-body, div[class*=\"article-content\"]",
+        "author_selector": ".article-author-name, .author",
+        "tags_selector": ".article-tag--item a, .tags a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "news",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bisnis",
+          "url_suffix": "bisnis",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bola",
+          "url_suffix": "bola",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "showbiz",
+          "url_suffix": "showbiz",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "lifestyle",
+          "url_suffix": "lifestyle",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "tekno",
+          "url_suffix": "tekno",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "otomotif",
+          "url_suffix": "otomotif",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "health",
+          "url_suffix": "health",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "tv",
+          "url_suffix": "tv",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "viva",
+      "name": "Viva.co.id",
+      "base_url": "https://www.viva.co.id/rss/",
+      "original_language": "id",
+      "schedule": "30 */4 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".article-content, .content-details, div[itemprop=\"articleBody\"]",
+        "author_selector": ".author-name, .reporter, a[rel=\"author\"]",
+        "tags_selector": ".tag-list a, .tags a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": null,
+          "url_override": "https://viva.co.id/get/all",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "berita",
+          "url_suffix": "berita",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bisnis",
+          "url_suffix": "bisnis",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "dunia",
+          "url_suffix": "dunia",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bola",
+          "url_suffix": "bola",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "sport",
+          "url_suffix": "sport",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "otomotif",
+          "url_suffix": "otomotif",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "teknologi",
+          "url_suffix": "teknologi",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "gaya_hidup",
+          "url_suffix": "gaya-hidup",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "hiburan",
+          "url_suffix": "hiburan",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "mediaindonesia",
+      "name": "Media Indonesia",
+      "base_url": "https://mediaindonesia.com/rss/",
+      "original_language": "id",
+      "schedule": "45 */3 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".article-content, .mi-post-content, div[class*=\"detail-text\"]",
+        "author_selector": ".reporter, .author, .journalist",
+        "tags_selector": ".tags a, .article-tags a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "politik",
+          "url_suffix": "politik",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "ekonomi",
+          "url_suffix": "ekonomi",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "olahraga",
+          "url_suffix": "olahraga",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "sepakbola",
+          "url_suffix": "sepakbola",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "megapolitan",
+          "url_suffix": "megapolitan",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "tanah_air",
+          "url_suffix": "tanahair",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "mancanegara",
+          "url_suffix": "mancanegara",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "iptek",
+          "url_suffix": "iptek",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "humaniora",
+          "url_suffix": "humaniora",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "hiburan",
+          "url_suffix": "hiburan",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "opini",
+          "url_suffix": "opini",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "jawapos",
+      "name": "Jawa Pos",
+      "base_url": "https://www.jawapos.com/feed/",
+      "original_language": "id",
+      "schedule": "20 */3 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".article-content, .detail-article, div[itemprop=\"articleBody\"]",
+        "author_selector": ".author-name, .detail-author span, .reporter",
+        "tags_selector": ".article-tags a, .tags a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "nasional",
+          "url_suffix": "nasional/",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "ekonomi",
+          "url_suffix": "ekonomi-bisnis/",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "olahraga",
+          "url_suffix": "olahraga/",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "showbiz",
+          "url_suffix": "show-and-entertainment/",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "lifestyle",
+          "url_suffix": "lifestyle-health/",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "tekno",
+          "url_suffix": "otomotif-tekno/",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "beritasatu",
+      "name": "Berita Satu",
+      "base_url": "https://www.beritasatu.com/feed/rss/",
+      "original_language": "id",
+      "schedule": "35 */4 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".article-body, .content-detail, div[class*=\"article__body\"]",
+        "author_selector": ".article-author, .author, span[class*=\"author\"]",
+        "tags_selector": ".article-tags a, .tag a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "nasional",
+          "url_suffix": "home/news",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "ekonomi",
+          "url_suffix": "home/ekonomi",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "dunia",
+          "url_suffix": "home/dunia",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "olahraga",
+          "url_suffix": "home/olahraga",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "hiburan",
+          "url_suffix": "home/hiburan",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "lifestyle",
+          "url_suffix": "home/lifestyle",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "teknologi",
+          "url_suffix": "home/teknologi",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "properti",
+          "url_suffix": "home/properti",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "detikfinance",
+      "name": "detikFinance",
+      "base_url": "https://finance.detik.com/rss",
+      "original_language": "id",
+      "schedule": "10 */3 * * *",
+      "auto_publish": false,
+      "ai_cleanup": true,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".detail__body-text, .itp_bodycontent",
+        "author_selector": ".detail__author",
+        "tags_selector": ".nav__tags a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bursa",
+          "url_suffix": null,
+          "url_override": "https://finance.detik.com/bursa-dan-valas/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "moneter",
+          "url_suffix": null,
+          "url_override": "https://finance.detik.com/moneter/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bisnis",
+          "url_suffix": null,
+          "url_override": "https://finance.detik.com/industri/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "energi",
+          "url_suffix": null,
+          "url_override": "https://finance.detik.com/energi/rss",
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "umkm",
+          "url_suffix": null,
+          "url_override": "https://finance.detik.com/umkm/rss",
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "tirto",
+      "name": "Tirto.id",
+      "base_url": "https://tirto.id/sitemap/r/",
+      "original_language": "id",
+      "schedule": "0 */6 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".article-content, .read__article-body, div[class*=\"article-body\"]",
+        "author_selector": ".author__name, .byline__author, a[class*=\"author\"]",
+        "tags_selector": ".article__tags a, .tags__item a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "google-discover",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "voaindonesia",
+      "name": "VOA Indonesia",
+      "base_url": "https://www.voaindonesia.com/api/",
+      "original_language": "id",
+      "schedule": "30 */6 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".wsw, div[class*=\"article-content\"]",
+        "author_selector": ".byline__author, .author",
+        "tags_selector": ".tags a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "zmgqol-vomx-tpeympp",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "indonesia",
+          "url_suffix": "zmgo_l-vomx-tpeymmy",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "dunia",
+          "url_suffix": "z-jqtl-vomx-tperypq",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "asia_pasifik",
+          "url_suffix": "zjgqql-vomx-tpebmpo",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "gaya_hidup",
+          "url_suffix": "zvjqil-vomx-tpeu_pm",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "kesehatan",
+          "url_suffix": "ztgq_l-vomx-tpekmpv",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "hiburan",
+          "url_suffix": "zggqrl-vomx-tpe-mpq",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "kapanlagi",
+      "name": "KapanLagi.com",
+      "base_url": "https://www.kapanlagi.com/feed",
+      "original_language": "id",
+      "schedule": "50 */6 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": false,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".news-detail-content, .kl-article-content, div[class*=\"article-content\"]",
+        "author_selector": ".author, .reporter, .byline",
+        "tags_selector": ".tag a, .detail-tag a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "koreantimes",
+      "name": "Korea Times",
+      "base_url": "https://feed.koreatimes.co.kr/k/",
+      "original_language": "en",
+      "schedule": "0 7 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": true,
+      "is_active": true,
+      "selectors": {
+        "content_selector": "div[class*=\"View_article\"]",
+        "author_selector": "a[class*=\"ReporterInfo_name\"]",
+        "tags_selector": "[class*=\"TopicFollowButton_btn-text\"]",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "allnews.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "nasional",
+          "url_suffix": "southkorea.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bisnis",
+          "url_suffix": "business.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "ekonomi",
+          "url_suffix": "economy.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "hiburan",
+          "url_suffix": "entertainment.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "lifestyle",
+          "url_suffix": "lifestyle.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "olahraga",
+          "url_suffix": "sports.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "dunia",
+          "url_suffix": "world.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "yonhap",
+      "name": "Yonhap News",
+      "base_url": "https://en.yna.co.kr/RSS/",
+      "original_language": "en",
+      "schedule": "0 8 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": true,
+      "is_active": true,
+      "selectors": {
+        "content_selector": "article.story-news",
+        "author_selector": "p.p_writer",
+        "tags_selector": ".kwd-lst a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "news.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "top",
+          "url_suffix": "topnews.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "politik",
+          "url_suffix": "politics.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "ekonomi",
+          "url_suffix": "economy.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "olahraga",
+          "url_suffix": "sports.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "hiburan",
+          "url_suffix": "entertainment.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "lifestyle",
+          "url_suffix": "culture.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "north_korea",
+          "url_suffix": "northkorea.xml",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "koreaherald",
+      "name": "The Korea Herald",
+      "base_url": "https://www.koreaherald.com/rss/",
+      "original_language": "en",
+      "schedule": "0 9 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": true,
+      "is_active": true,
+      "selectors": {
+        "content_selector": "#articleBody",
+        "author_selector": "em.editor_name, .view_editors .name",
+        "tags_selector": ".view_tag a",
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "newsAll",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "nasional",
+          "url_suffix": "0201010000",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "bisnis",
+          "url_suffix": "0201020000",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "lifestyle",
+          "url_suffix": "0201030000",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "hiburan",
+          "url_suffix": "0201040000",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "olahraga",
+          "url_suffix": "0201050000",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        },
+        {
+          "category_key": "dunia",
+          "url_suffix": "0201060000",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "key": "kcna",
+      "name": "KCNA Watch",
+      "base_url": "https://kcnawatch.org/",
+      "original_language": "en",
+      "schedule": "0 10 * * *",
+      "auto_publish": false,
+      "ai_cleanup": false,
+      "auto_translate": true,
+      "is_active": true,
+      "selectors": {
+        "content_selector": ".col-lg-9",
+        "author_selector": null,
+        "tags_selector": null,
+        "extra_fields": null
+      },
+      "categories": [
+        {
+          "category_key": "terbaru",
+          "url_suffix": "feed/",
+          "url_override": null,
+          "article_limit": 10,
+          "is_active": true
+        }
+      ]
+    }
+  ]
+}
