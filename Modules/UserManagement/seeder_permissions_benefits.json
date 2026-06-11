@@ -1,0 +1,571 @@
+{
+  "_meta": {
+    "description": "Seeder data untuk sistem Role, Permission, dan Benefit KAI App",
+    "version": "1.0.0",
+    "created_at": "2026-06-11",
+    "notes": [
+      "Urutan insert: permissions → roles → benefits_master → plans → plan_benefits → system_role_permissions",
+      "UUID menggunakan format placeholder — generate ulang dengan gen_random_uuid() di DB",
+      "assigned_by untuk system_role_permissions merujuk ke usergod ID (isi setelah insert usergod user)",
+      "community_role_permissions TIDAK di-seed di sini — di-generate saat komunitas pertama dibuat"
+    ]
+  },
+
+  "permissions": [
+    {
+      "id": "perm-001",
+      "key": "read_content",
+      "display_name": "Read Content",
+      "description": "Baca berita, event, direktori, dan konten publik platform",
+      "scope": "global",
+      "category": "content",
+      "risk_level": "low"
+    },
+    {
+      "id": "perm-002",
+      "key": "join_community",
+      "display_name": "Join Community",
+      "description": "Bergabung ke komunitas public maupun private (via invite)",
+      "scope": "global",
+      "category": "content",
+      "risk_level": "low"
+    },
+    {
+      "id": "perm-003",
+      "key": "ask_qna",
+      "display_name": "Ask Q&A",
+      "description": "Mengajukan pertanyaan di modul Q&A",
+      "scope": "global",
+      "category": "content",
+      "risk_level": "low"
+    },
+    {
+      "id": "perm-004",
+      "key": "post_content",
+      "display_name": "Post Content",
+      "description": "Membuat postingan dan komentar di dalam komunitas",
+      "scope": "community",
+      "category": "content",
+      "risk_level": "low"
+    },
+    {
+      "id": "perm-005",
+      "key": "post_news",
+      "display_name": "Post News Article",
+      "description": "Membuat dan submit artikel berita (memerlukan approval jika role member)",
+      "scope": "global",
+      "category": "content",
+      "risk_level": "medium"
+    },
+    {
+      "id": "perm-006",
+      "key": "approve_news",
+      "display_name": "Approve News",
+      "description": "Approve atau reject artikel berita sebelum publish ke platform",
+      "scope": "global",
+      "category": "admin",
+      "risk_level": "high"
+    },
+    {
+      "id": "perm-007",
+      "key": "create_community",
+      "display_name": "Create Community",
+      "description": "Membuat komunitas baru dan otomatis menjadi leader-nya",
+      "scope": "global",
+      "category": "content",
+      "risk_level": "low"
+    },
+    {
+      "id": "perm-008",
+      "key": "moderate_posts",
+      "display_name": "Moderate Posts",
+      "description": "Moderasi postingan dan komentar anggota di dalam komunitas",
+      "scope": "community",
+      "category": "moderation",
+      "risk_level": "medium"
+    },
+    {
+      "id": "perm-009",
+      "key": "manage_members",
+      "display_name": "Manage Community Members",
+      "description": "Kelola anggota komunitas: approve join, kick, assign role community",
+      "scope": "community",
+      "category": "member",
+      "risk_level": "medium"
+    },
+    {
+      "id": "perm-010",
+      "key": "delete_content",
+      "display_name": "Delete Content",
+      "description": "Hapus postingan atau komentar milik anggota di dalam komunitas",
+      "scope": "community",
+      "category": "moderation",
+      "risk_level": "high"
+    },
+    {
+      "id": "perm-011",
+      "key": "create_store",
+      "display_name": "Create Store / Merchant",
+      "description": "Registrasi company dan buat listing merchant di modul Directory",
+      "scope": "global",
+      "category": "content",
+      "risk_level": "low"
+    },
+    {
+      "id": "perm-012",
+      "key": "create_event",
+      "display_name": "Create Event",
+      "description": "Membuat dan mengelola event serta pendaftaran peserta",
+      "scope": "global",
+      "category": "content",
+      "risk_level": "low"
+    },
+    {
+      "id": "perm-013",
+      "key": "view_analytics",
+      "display_name": "View Analytics",
+      "description": "Melihat dashboard analitik: statistik komunitas, engagement, dan platform",
+      "scope": "global",
+      "category": "admin",
+      "risk_level": "low"
+    },
+    {
+      "id": "perm-014",
+      "key": "assign_role",
+      "display_name": "Assign Role",
+      "description": "Assign atau revoke system role ke user di level global maupun regional",
+      "scope": "global",
+      "category": "admin",
+      "risk_level": "high"
+    },
+    {
+      "id": "perm-015",
+      "key": "manage_region",
+      "display_name": "Manage Region",
+      "description": "Kelola setting, data, dan konten di wilayah (region) yang di-assign",
+      "scope": "regional",
+      "category": "admin",
+      "risk_level": "high"
+    },
+    {
+      "id": "perm-016",
+      "key": "manage_news_sources",
+      "display_name": "Manage News Sources",
+      "description": "Tambah, edit, dan hapus sumber RSS / feed berita otomatis",
+      "scope": "global",
+      "category": "system",
+      "risk_level": "high"
+    },
+    {
+      "id": "perm-017",
+      "key": "configure_auto_schedule",
+      "display_name": "Configure Auto Schedule",
+      "description": "Konfigurasi jadwal otomatis publish berita dari sumber RSS",
+      "scope": "global",
+      "category": "system",
+      "risk_level": "high"
+    },
+    {
+      "id": "perm-018",
+      "key": "post_ads",
+      "display_name": "Post Ads",
+      "description": "Membuat dan memasang iklan di platform (image, video, text, native)",
+      "scope": "global",
+      "category": "content",
+      "risk_level": "medium"
+    },
+    {
+      "id": "perm-019",
+      "key": "manage_reports",
+      "display_name": "Manage Content Reports",
+      "description": "Review, triage, dan resolve laporan konten dari anggota komunitas",
+      "scope": "community",
+      "category": "moderation",
+      "risk_level": "high"
+    },
+    {
+      "id": "perm-020",
+      "key": "manage_bug_reports",
+      "display_name": "Manage Bug Reports",
+      "description": "Triage dan resolve laporan bug dari seluruh user platform",
+      "scope": "global",
+      "category": "admin",
+      "risk_level": "high"
+    }
+  ],
+
+  "roles": [
+    {
+      "id": "role-001",
+      "name": "usergod",
+      "display_name": "Developer / Vendor",
+      "description": "Akses penuh ke seluruh sistem. Hanya untuk developer — tidak bisa di-assign via UI.",
+      "role_type": "system",
+      "assignable": false
+    },
+    {
+      "id": "role-002",
+      "name": "superadmin",
+      "display_name": "Admin KAI Pusat",
+      "description": "Admin pusat, mengelola seluruh platform dan konten KAI Pusat.",
+      "role_type": "system",
+      "assignable": true
+    },
+    {
+      "id": "role-003",
+      "name": "admin",
+      "display_name": "Admin Region",
+      "description": "Admin per wilayah, mengelola konten dan member di region yang di-assign.",
+      "role_type": "system",
+      "assignable": true
+    },
+    {
+      "id": "role-004",
+      "name": "member",
+      "display_name": "Member",
+      "description": "User terdaftar dengan subscription plan (standard atau pro).",
+      "role_type": "system",
+      "assignable": true
+    },
+    {
+      "id": "role-005",
+      "name": "guest",
+      "display_name": "Guest",
+      "description": "Belum login, hanya bisa akses konten publik read-only.",
+      "role_type": "system",
+      "assignable": true
+    },
+    {
+      "id": "role-006",
+      "name": "leader",
+      "display_name": "Community Leader",
+      "description": "Founder / owner komunitas. Bisa manage anggota, settings, dan moderasi.",
+      "role_type": "community",
+      "assignable": true
+    },
+    {
+      "id": "role-007",
+      "name": "moderator",
+      "display_name": "Community Moderator",
+      "description": "Membantu leader untuk moderasi konten dan anggota komunitas.",
+      "role_type": "community",
+      "assignable": true
+    },
+    {
+      "id": "role-008",
+      "name": "community_member",
+      "display_name": "Community Member",
+      "description": "Anggota biasa dalam suatu komunitas.",
+      "role_type": "community",
+      "assignable": true
+    }
+  ],
+
+  "plans": [
+    {
+      "id": "plan-standard",
+      "name": "standard",
+      "display_name": "Standard",
+      "description": "Akses fitur utama: baca konten, join komunitas, tanya QnA, lihat direktori",
+      "price": 49000,
+      "currency": "IDR",
+      "duration_days": 30,
+      "is_default": true,
+      "status": "active"
+    },
+    {
+      "id": "plan-pro",
+      "name": "pro",
+      "display_name": "Pro",
+      "description": "Standard + posting news, buat community, buat company/merchants, buat event, analytics",
+      "price": 129000,
+      "currency": "IDR",
+      "duration_days": 30,
+      "is_default": false,
+      "status": "active"
+    }
+  ],
+
+  "benefits_master": [
+    {
+      "key": "read_content",
+      "description": "Baca news, event, direktori, dan konten publik",
+      "approval_required": false,
+      "approval_role": null
+    },
+    {
+      "key": "join_community",
+      "description": "Bergabung ke komunitas public dan private",
+      "approval_required": false,
+      "approval_role": null
+    },
+    {
+      "key": "post_community",
+      "description": "Post konten dan komentar di komunitas (unlimited)",
+      "approval_required": false,
+      "approval_role": null
+    },
+    {
+      "key": "ask_qna",
+      "description": "Mengajukan pertanyaan di modul Q&A",
+      "approval_required": false,
+      "approval_role": null
+    },
+    {
+      "key": "post_news",
+      "description": "Membuat dan submit artikel berita (member Pro perlu approval admin)",
+      "approval_required": true,
+      "approval_role": "admin"
+    },
+    {
+      "key": "create_community",
+      "description": "Membuat dan mengelola komunitas baru",
+      "approval_required": false,
+      "approval_role": null
+    },
+    {
+      "key": "create_store",
+      "description": "Registrasi company dan buat listing merchant di Directory",
+      "approval_required": true,
+      "approval_role": "admin"
+    },
+    {
+      "key": "create_event",
+      "description": "Membuat event dan mengelola pendaftaran peserta",
+      "approval_required": false,
+      "approval_role": null
+    },
+    {
+      "key": "view_analytics",
+      "description": "Melihat dashboard analitik komunitas dan platform",
+      "approval_required": false,
+      "approval_role": null
+    },
+    {
+      "key": "post_ads",
+      "description": "Membuat dan memasang iklan di platform KAI",
+      "approval_required": true,
+      "approval_role": "superadmin"
+    }
+  ],
+
+  "plan_benefits": [
+    {
+      "plan_id": "plan-standard",
+      "benefit_key": "read_content",
+      "enabled": true
+    },
+    {
+      "plan_id": "plan-standard",
+      "benefit_key": "join_community",
+      "enabled": true
+    },
+    {
+      "plan_id": "plan-standard",
+      "benefit_key": "post_community",
+      "enabled": true
+    },
+    {
+      "plan_id": "plan-standard",
+      "benefit_key": "ask_qna",
+      "enabled": true
+    },
+    {
+      "plan_id": "plan-standard",
+      "benefit_key": "post_news",
+      "enabled": false
+    },
+    {
+      "plan_id": "plan-standard",
+      "benefit_key": "create_community",
+      "enabled": false
+    },
+    {
+      "plan_id": "plan-standard",
+      "benefit_key": "create_store",
+      "enabled": false
+    },
+    {
+      "plan_id": "plan-standard",
+      "benefit_key": "create_event",
+      "enabled": false
+    },
+    {
+      "plan_id": "plan-standard",
+      "benefit_key": "view_analytics",
+      "enabled": false
+    },
+    {
+      "plan_id": "plan-standard",
+      "benefit_key": "post_ads",
+      "enabled": false
+    },
+    {
+      "plan_id": "plan-pro",
+      "benefit_key": "read_content",
+      "enabled": true
+    },
+    {
+      "plan_id": "plan-pro",
+      "benefit_key": "join_community",
+      "enabled": true
+    },
+    {
+      "plan_id": "plan-pro",
+      "benefit_key": "post_community",
+      "enabled": true
+    },
+    {
+      "plan_id": "plan-pro",
+      "benefit_key": "ask_qna",
+      "enabled": true
+    },
+    {
+      "plan_id": "plan-pro",
+      "benefit_key": "post_news",
+      "enabled": true
+    },
+    {
+      "plan_id": "plan-pro",
+      "benefit_key": "create_community",
+      "enabled": true
+    },
+    {
+      "plan_id": "plan-pro",
+      "benefit_key": "create_store",
+      "enabled": true
+    },
+    {
+      "plan_id": "plan-pro",
+      "benefit_key": "create_event",
+      "enabled": true
+    },
+    {
+      "plan_id": "plan-pro",
+      "benefit_key": "view_analytics",
+      "enabled": true
+    },
+    {
+      "plan_id": "plan-pro",
+      "benefit_key": "post_ads",
+      "enabled": true
+    }
+  ],
+
+  "system_role_permissions": [
+    {
+      "_comment": "=== USERGOD: semua permission ===",
+      "role_id": "role-001",
+      "permission_id": "perm-001"
+    },
+    { "role_id": "role-001", "permission_id": "perm-002" },
+    { "role_id": "role-001", "permission_id": "perm-003" },
+    { "role_id": "role-001", "permission_id": "perm-004" },
+    { "role_id": "role-001", "permission_id": "perm-005" },
+    { "role_id": "role-001", "permission_id": "perm-006" },
+    { "role_id": "role-001", "permission_id": "perm-007" },
+    { "role_id": "role-001", "permission_id": "perm-008" },
+    { "role_id": "role-001", "permission_id": "perm-009" },
+    { "role_id": "role-001", "permission_id": "perm-010" },
+    { "role_id": "role-001", "permission_id": "perm-011" },
+    { "role_id": "role-001", "permission_id": "perm-012" },
+    { "role_id": "role-001", "permission_id": "perm-013" },
+    { "role_id": "role-001", "permission_id": "perm-014" },
+    { "role_id": "role-001", "permission_id": "perm-015" },
+    { "role_id": "role-001", "permission_id": "perm-016" },
+    { "role_id": "role-001", "permission_id": "perm-017" },
+    { "role_id": "role-001", "permission_id": "perm-018" },
+    { "role_id": "role-001", "permission_id": "perm-019" },
+    { "role_id": "role-001", "permission_id": "perm-020" },
+
+    {
+      "_comment": "=== SUPERADMIN: semua kecuali system config (manage_news_sources, configure_auto_schedule) ===",
+      "role_id": "role-002",
+      "permission_id": "perm-001"
+    },
+    { "role_id": "role-002", "permission_id": "perm-002" },
+    { "role_id": "role-002", "permission_id": "perm-003" },
+    { "role_id": "role-002", "permission_id": "perm-004" },
+    { "role_id": "role-002", "permission_id": "perm-005" },
+    { "role_id": "role-002", "permission_id": "perm-006" },
+    { "role_id": "role-002", "permission_id": "perm-007" },
+    { "role_id": "role-002", "permission_id": "perm-008" },
+    { "role_id": "role-002", "permission_id": "perm-009" },
+    { "role_id": "role-002", "permission_id": "perm-010" },
+    { "role_id": "role-002", "permission_id": "perm-011" },
+    { "role_id": "role-002", "permission_id": "perm-012" },
+    { "role_id": "role-002", "permission_id": "perm-013" },
+    { "role_id": "role-002", "permission_id": "perm-014" },
+    { "role_id": "role-002", "permission_id": "perm-015" },
+    { "role_id": "role-002", "permission_id": "perm-018" },
+    { "role_id": "role-002", "permission_id": "perm-019" },
+    { "role_id": "role-002", "permission_id": "perm-020" },
+
+    {
+      "_comment": "=== ADMIN REGION: kelola konten regional, approve, moderate ===",
+      "role_id": "role-003",
+      "permission_id": "perm-001"
+    },
+    { "role_id": "role-003", "permission_id": "perm-002" },
+    { "role_id": "role-003", "permission_id": "perm-003" },
+    { "role_id": "role-003", "permission_id": "perm-004" },
+    { "role_id": "role-003", "permission_id": "perm-005" },
+    { "role_id": "role-003", "permission_id": "perm-006" },
+    { "role_id": "role-003", "permission_id": "perm-007" },
+    { "role_id": "role-003", "permission_id": "perm-008" },
+    { "role_id": "role-003", "permission_id": "perm-009" },
+    { "role_id": "role-003", "permission_id": "perm-010" },
+    { "role_id": "role-003", "permission_id": "perm-011" },
+    { "role_id": "role-003", "permission_id": "perm-012" },
+    { "role_id": "role-003", "permission_id": "perm-013" },
+    { "role_id": "role-003", "permission_id": "perm-015" },
+    { "role_id": "role-003", "permission_id": "perm-019" },
+
+    {
+      "_comment": "=== MEMBER: aksi dasar platform — fitur lanjutan gated via benefit/plan ===",
+      "role_id": "role-004",
+      "permission_id": "perm-001"
+    },
+    { "role_id": "role-004", "permission_id": "perm-002" },
+    { "role_id": "role-004", "permission_id": "perm-003" },
+    { "role_id": "role-004", "permission_id": "perm-004" },
+    { "role_id": "role-004", "permission_id": "perm-005" },
+    { "role_id": "role-004", "permission_id": "perm-007" },
+    { "role_id": "role-004", "permission_id": "perm-011" },
+    { "role_id": "role-004", "permission_id": "perm-012" },
+    { "role_id": "role-004", "permission_id": "perm-013" },
+    { "role_id": "role-004", "permission_id": "perm-018" },
+
+    {
+      "_comment": "=== GUEST: read-only saja ===",
+      "role_id": "role-005",
+      "permission_id": "perm-001"
+    },
+
+    {
+      "_comment": "=== COMMUNITY LEADER: full control dalam komunitas ===",
+      "role_id": "role-006",
+      "permission_id": "perm-004"
+    },
+    { "role_id": "role-006", "permission_id": "perm-008" },
+    { "role_id": "role-006", "permission_id": "perm-009" },
+    { "role_id": "role-006", "permission_id": "perm-010" },
+    { "role_id": "role-006", "permission_id": "perm-019" },
+
+    {
+      "_comment": "=== COMMUNITY MODERATOR: moderasi konten, tidak bisa manage members ===",
+      "role_id": "role-007",
+      "permission_id": "perm-004"
+    },
+    { "role_id": "role-007", "permission_id": "perm-008" },
+    { "role_id": "role-007", "permission_id": "perm-010" },
+    { "role_id": "role-007", "permission_id": "perm-019" },
+
+    {
+      "_comment": "=== COMMUNITY MEMBER: post dan baca dalam komunitas saja ===",
+      "role_id": "role-008",
+      "permission_id": "perm-004"
+    },
+    { "role_id": "role-008", "permission_id": "perm-003" }
+  ]
+}
