@@ -1,0 +1,129 @@
+{
+  "_meta": {
+    "description": "News categories master seeder for KAI App. Clean, unique master categories for the news_categories table. category_key per source is configured separately in source_categories.",
+    "version": "1.0.0",
+    "generated_at": "2026-06-04",
+    "total_categories": 23,
+    "notes": [
+      "Master categories only — no duplicates. created_by must be set when inserting.",
+      "Each source maps its own category_key to one of these via source_categories.news_category_id."
+    ]
+  },
+  "categories": [
+    {
+      "slug": "nasional",
+      "name": "Nasional",
+      "sort_order": 1
+    },
+    {
+      "slug": "internasional",
+      "name": "Internasional",
+      "sort_order": 2
+    },
+    {
+      "slug": "politik",
+      "name": "Politik",
+      "sort_order": 3
+    },
+    {
+      "slug": "hukum",
+      "name": "Hukum",
+      "sort_order": 4
+    },
+    {
+      "slug": "ekonomi",
+      "name": "Ekonomi & Bisnis",
+      "sort_order": 5
+    },
+    {
+      "slug": "olahraga",
+      "name": "Olahraga",
+      "sort_order": 6
+    },
+    {
+      "slug": "sepakbola",
+      "name": "Sepakbola",
+      "sort_order": 7
+    },
+    {
+      "slug": "teknologi",
+      "name": "Teknologi",
+      "sort_order": 8
+    },
+    {
+      "slug": "sains",
+      "name": "Sains",
+      "sort_order": 9
+    },
+    {
+      "slug": "otomotif",
+      "name": "Otomotif",
+      "sort_order": 10
+    },
+    {
+      "slug": "hiburan",
+      "name": "Hiburan",
+      "sort_order": 11
+    },
+    {
+      "slug": "lifestyle",
+      "name": "Gaya Hidup",
+      "sort_order": 12
+    },
+    {
+      "slug": "kesehatan",
+      "name": "Kesehatan",
+      "sort_order": 13
+    },
+    {
+      "slug": "travel",
+      "name": "Travel",
+      "sort_order": 14
+    },
+    {
+      "slug": "kuliner",
+      "name": "Kuliner",
+      "sort_order": 15
+    },
+    {
+      "slug": "pendidikan",
+      "name": "Pendidikan",
+      "sort_order": 16
+    },
+    {
+      "slug": "properti",
+      "name": "Properti",
+      "sort_order": 17
+    },
+    {
+      "slug": "religi",
+      "name": "Religi",
+      "sort_order": 18
+    },
+    {
+      "slug": "daerah",
+      "name": "Daerah",
+      "sort_order": 19
+    },
+    {
+      "slug": "humaniora",
+      "name": "Humaniora",
+      "sort_order": 20
+    },
+    {
+      "slug": "opini",
+      "name": "Opini",
+      "sort_order": 21
+    },
+    {
+      "slug": "korea",
+      "name": "Korea",
+      "sort_order": 22
+    },
+    {
+      "slug": "umum",
+      "name": "Umum",
+      "sort_order": 99
+    }
+  ]
+}
