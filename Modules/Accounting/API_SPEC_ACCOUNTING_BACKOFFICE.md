@@ -1,11 +1,9 @@
-# API Spec — Accounting Backoffice (v1.0)
+# API Spec — Accounting Backoffice (v1.1)
 
-API specification untuk Accounting module KAI App — **backoffice surface** (Superadmin & Admin Region). Tidak ada surface mobile.
+API specification untuk Accounting module KAI App — **backoffice surface, Superadmin (KAI Pusat) only**. Tidak ada surface mobile, tidak ada Admin Region, tidak ada scope region.
 
 Base URL: `/api/v1/admin/accounting`
-Auth: Bearer token
-- **Admin Region** → scope otomatis ke region sendiri
-- **Superadmin** → semua region + Pusat
+Auth: Bearer token (Superadmin only)
 
 ---
 
@@ -14,14 +12,13 @@ Auth: Bearer token
 ### 1. POST /entries
 Catat transaksi baru (IN/OUT).
 
-**Auth:** Admin Region (region sendiri) / Superadmin
+**Auth:** Superadmin
 
 **Request Body:**
 ```json
 {
   "direction": "OUT",
   "category_id": "cat_exp_event",
-  "region_id": "reg_jakarta",
   "amount": 5000000,
   "currency": "IDR",
   "exchange_rate": 1,
@@ -38,7 +35,6 @@ Catat transaksi baru (IN/OUT).
 - `amount`: required, > 0
 - `currency`: default `IDR`; jika ≠ IDR maka `exchange_rate` wajib
 - `transaction_date`: required
-- Admin Region: `region_id` dipaksa ke region sendiri (abaikan input lain)
 - Jika setting `require_attachment_for_out = true` dan `direction = OUT`: `attachment_url` wajib
 
 **Response (201 Created):**
@@ -48,7 +44,6 @@ Catat transaksi baru (IN/OUT).
     "id": "entry_001",
     "direction": "OUT",
     "category": { "id": "cat_exp_event", "code": "EXP_EVENT", "name": "Biaya Event" },
-    "region_id": "reg_jakarta",
     "amount": 5000000,
     "currency": "IDR",
     "exchange_rate": 1,
@@ -58,7 +53,7 @@ Catat transaksi baru (IN/OUT).
     "attachment_url": "https://cdn.kai.app/receipts/abc.jpg",
     "source": "manual",
     "status": "recorded",
-    "created_by": "usr_admin_jkt",
+    "created_by": "usr_superadmin",
     "created_at": "2026-06-11T08:00:00.000Z"
   }
 }
@@ -74,10 +69,9 @@ Catat transaksi baru (IN/OUT).
 ### 2. GET /entries
 List & filter transaksi.
 
-**Auth:** Admin Region (region sendiri) / Superadmin
+**Auth:** Superadmin
 
 **Query Parameters:**
-- `region` — filter region (Admin Region ter-scope otomatis)
 - `direction` — `IN` | `OUT`
 - `category_id`
 - `status` — `recorded` | `verified` | `void`
@@ -93,7 +87,6 @@ List & filter transaksi.
       "id": "entry_001",
       "direction": "OUT",
       "category": { "code": "EXP_EVENT", "name": "Biaya Event" },
-      "region_id": "reg_jakarta",
       "amount": 5000000,
       "currency": "IDR",
       "amount_base": 5000000,
@@ -112,21 +105,16 @@ List & filter transaksi.
 ### 3. GET /entries/:id
 Detail satu transaksi.
 
-**Auth:** Admin Region (region sendiri) / Superadmin
+**Auth:** Superadmin
 
 **Response (200 OK):** objek entry lengkap (semua field, termasuk audit & reconciliation).
-
-**Response (403):**
-```json
-{ "message": "You can only access entries in your own region" }
-```
 
 ---
 
 ### 4. PUT /entries/:id
 Edit transaksi. Hanya bila status `recorded` (belum `verified`).
 
-**Auth:** Pembuat entri (region sendiri) / Superadmin
+**Auth:** Superadmin
 
 **Request Body:** field yang sama dengan POST (subset boleh).
 
@@ -142,7 +130,7 @@ Edit transaksi. Hanya bila status `recorded` (belum `verified`).
 ### 5. POST /entries/:id/void
 Batalkan transaksi (tidak menghapus, tetap tersimpan untuk audit).
 
-**Auth:** Pembuat (sebelum verified) / Superadmin (kapan saja)
+**Auth:** Superadmin
 
 **Request Body:**
 ```json
@@ -159,7 +147,7 @@ Batalkan transaksi (tidak menghapus, tetap tersimpan untuk audit).
 ### 6. POST /entries/:id/verify
 Verifikasi transaksi. Hanya aktif jika setting `verification_required = true`.
 
-**Auth:** Superadmin only
+**Auth:** Superadmin
 
 **Response (200 OK):**
 ```json
@@ -190,7 +178,6 @@ Endpoint internal untuk modul lain (Subscription, Ads, payment webhook) push ent
 {
   "direction": "IN",
   "category_code": "REV_SUBSCRIPTION",
-  "region_id": null,
   "amount": 80000,
   "currency": "IDR",
   "transaction_date": "2026-06-11",
@@ -211,7 +198,7 @@ Endpoint internal untuk modul lain (Subscription, Ads, payment webhook) push ent
 ### 8. GET /categories
 List kategori (hierarkis).
 
-**Auth:** Admin Region / Superadmin
+**Auth:** Superadmin
 
 **Query Parameters:**
 - `direction` (`IN`/`OUT`)
@@ -251,7 +238,7 @@ List kategori (hierarkis).
 ### 9. POST /categories
 Buat kategori baru (parent atau child).
 
-**Auth:** Superadmin only
+**Auth:** Superadmin
 
 **Request Body (parent / top-level):**
 ```json
@@ -278,7 +265,7 @@ Buat kategori baru (parent atau child).
 ### 10. PUT /categories/:id
 Edit kategori (nama, deskripsi, is_active). `code`, `direction`, dan `parent_id` tidak bisa diubah jika sudah dipakai transaksi.
 
-**Auth:** Superadmin only
+**Auth:** Superadmin
 
 **Response (200 OK):** kategori ter-update.
 
@@ -296,16 +283,15 @@ Edit kategori (nama, deskripsi, is_active). `code`, `direction`, dan `parent_id`
 ### 11. GET /reports/summary
 Ringkasan saldo & cashflow untuk periode.
 
-**Auth:** Admin Region (region sendiri) / Superadmin (global atau filter region)
+**Auth:** Superadmin
 
-**Query Parameters:** `region`, `from`, `to`
+**Query Parameters:** `from`, `to`
 
 **Response (200 OK):**
 ```json
 {
   "data": {
     "period": { "from": "2026-06-01", "to": "2026-06-30" },
-    "region_id": "reg_jakarta",
     "currency": "IDR",
     "total_in": 12000000,
     "total_out": 7500000,
@@ -318,9 +304,9 @@ Ringkasan saldo & cashflow untuk periode.
 ### 12. GET /reports/by-category
 Breakdown per kategori, mendukung roll-up ke parent atau rincian per child.
 
-**Auth:** Admin Region (region sendiri) / Superadmin
+**Auth:** Superadmin
 
-**Query Parameters:** `region`, `from`, `to`, `direction`, `group_by` (`parent` | `child`, default `child`)
+**Query Parameters:** `from`, `to`, `direction`, `group_by` (`parent` | `child`, default `child`)
 
 **Response (200 OK — group_by=parent, roll-up):**
 ```json
@@ -346,30 +332,12 @@ Breakdown per kategori, mendukung roll-up ke parent atau rincian per child.
 ```
 > `group_by=parent` menjumlahkan semua child ke induknya (entri yang di-assign langsung ke parent juga ikut). `group_by=child` merinci per kategori asli.
 
-### 13. GET /reports/by-region (Superadmin)
-Cashflow per region untuk laporan global.
-
-**Auth:** Superadmin only
-
-**Query Parameters:** `from`, `to`
-
-**Response (200 OK):**
-```json
-{
-  "data": [
-    { "region_id": "reg_jakarta", "total_in": 12000000, "total_out": 7500000, "balance": 4500000 },
-    { "region_id": "reg_surabaya", "total_in": 6000000, "total_out": 4000000, "balance": 2000000 },
-    { "region_id": null, "label": "Pusat", "total_in": 20000000, "total_out": 15000000, "balance": 5000000 }
-  ]
-}
-```
-
-### 14. GET /reports/export
+### 13. GET /reports/export
 Export transaksi ke CSV/JSON (untuk software akuntansi eksternal).
 
-**Auth:** Admin Region (region sendiri) / Superadmin
+**Auth:** Superadmin
 
-**Query Parameters:** `region`, `from`, `to`, `format` (`csv` | `json`)
+**Query Parameters:** `from`, `to`, `format` (`csv` | `json`)
 
 **Response:** File (`text/csv` atau `application/json`). Kolom termasuk `code` kategori standar untuk mapping ke software akuntansi.
 
@@ -377,10 +345,10 @@ Export transaksi ke CSV/JSON (untuk software akuntansi eksternal).
 
 ## SETTINGS
 
-### 15. GET /settings
+### 14. GET /settings
 Ambil setting accounting.
 
-**Auth:** Superadmin only
+**Auth:** Superadmin
 
 **Response (200 OK):**
 ```json
@@ -388,17 +356,16 @@ Ambil setting accounting.
   "data": {
     "verification_required": false,
     "default_currency": "IDR",
-    "allow_region_admin_input": true,
     "require_attachment_for_out": false,
     "fiscal_year_start_month": 1
   }
 }
 ```
 
-### 16. PUT /settings
+### 15. PUT /settings
 Update setting.
 
-**Auth:** Superadmin only
+**Auth:** Superadmin
 
 **Request Body:** subset field setting.
 
@@ -407,7 +374,7 @@ Update setting.
 ---
 
 ## CATATAN ARSITEKTUR
-1. **Scope region wajib di-enforce di backend** — Admin Region selalu di-filter ke region sendiri, jangan andalkan frontend.
+1. **Superadmin only** — seluruh endpoint dibatasi ke Superadmin; tidak ada Admin Region dan tidak ada scope region.
 2. **Verifikasi opsional** — endpoint `/verify` hanya berfungsi jika `verification_required = true`.
 3. **Entri void tidak dihapus** — tetap tersimpan, dikeluarkan dari laporan.
 4. **`amount_base` (IDR)** dipakai di semua laporan agar konsisten lintas currency.

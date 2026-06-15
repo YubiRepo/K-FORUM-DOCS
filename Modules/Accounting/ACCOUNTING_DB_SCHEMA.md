@@ -1,16 +1,15 @@
-# Accounting Module — Database Schema (v1.0)
+# Accounting Module — Database Schema (v1.1)
 
-Database schema untuk Accounting module KAI App. Ledger pencatatan in/out dengan scope region, multi-currency, dan field hook untuk future integrasi.
+Database schema untuk Accounting module KAI App. Ledger pencatatan in/out, multi-currency, kategori hierarkis, dan field hook untuk future integrasi.
+
+> **Catatan v1.1:** Accounting **tidak menggunakan region**. Tidak ada kolom `region_id` di tabel manapun — modul ini murni tingkat Pusat (Superadmin).
 
 ---
 
 ## Overview Relasi
 
 ```
-regions (dari modul region)
-  └── accounting_entries (1:N, via region_id; null = Pusat)
-
-accounting_categories
+accounting_categories (self-reference: parent → child)
   └── accounting_entries (1:N, via category_id)
 
 users (dari modul auth)
@@ -96,7 +95,6 @@ CREATE TABLE accounting_entries (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     direction        VARCHAR(3) NOT NULL,            -- 'IN' | 'OUT'
     category_id      UUID NOT NULL REFERENCES accounting_categories(id),
-    region_id        VARCHAR(50) NULL,               -- null = Pusat; atau region tertentu
 
     -- Nominal & currency
     amount           NUMERIC(18,2) NOT NULL,         -- nominal dalam currency asli
@@ -129,14 +127,12 @@ CREATE TABLE accounting_entries (
     created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT fk_entry_region FOREIGN KEY (region_id) REFERENCES regions(id),
     CONSTRAINT chk_entry_direction CHECK (direction IN ('IN', 'OUT')),
     CONSTRAINT chk_entry_source    CHECK (source IN ('manual', 'system')),
     CONSTRAINT chk_entry_status    CHECK (status IN ('recorded', 'verified', 'void')),
     CONSTRAINT chk_entry_amount    CHECK (amount > 0)
 );
 
-CREATE INDEX idx_entry_region     ON accounting_entries (region_id);
 CREATE INDEX idx_entry_category   ON accounting_entries (category_id);
 CREATE INDEX idx_entry_direction  ON accounting_entries (direction);
 CREATE INDEX idx_entry_status     ON accounting_entries (status);
@@ -150,7 +146,7 @@ CREATE INDEX idx_entry_created_by ON accounting_entries (created_by);
 - **`source` / `source_ref`** memisahkan entri manual dari entri auto (future). Phase 1 selalu `manual`.
 - **`external_txn_id` / `payment_provider`** disiapkan untuk integrasi gateway, kosong di Phase 1.
 - **`transaction_date`** dipakai untuk laporan keuangan (bukan `created_at`).
-- **`region_id` null** = transaksi tingkat Pusat (bukan region tertentu).
+- **Tidak ada `region_id`** — modul ini tingkat Pusat saja.
 
 ---
 
@@ -163,7 +159,6 @@ CREATE TABLE accounting_settings (
     id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     verification_required    BOOLEAN NOT NULL DEFAULT FALSE,
     default_currency         VARCHAR(3) NOT NULL DEFAULT 'IDR',
-    allow_region_admin_input BOOLEAN NOT NULL DEFAULT TRUE,
     require_attachment_for_out BOOLEAN NOT NULL DEFAULT FALSE,
     fiscal_year_start_month  INTEGER NOT NULL DEFAULT 1,
     updated_by               UUID NULL REFERENCES users(id),
@@ -184,7 +179,6 @@ VALUES (FALSE, 'IDR');
 ```sql
 CREATE TABLE accounting_budgets (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    region_id     VARCHAR(50) NULL REFERENCES regions(id), -- null = Pusat
     category_id   UUID NULL REFERENCES accounting_categories(id),
     period_year   INTEGER NOT NULL,
     period_month  INTEGER NULL,                  -- null = budget tahunan
@@ -202,7 +196,6 @@ CREATE TABLE accounting_recurring_templates (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     direction     VARCHAR(3) NOT NULL,
     category_id   UUID NOT NULL REFERENCES accounting_categories(id),
-    region_id     VARCHAR(50) NULL REFERENCES regions(id),
     amount        NUMERIC(18,2) NOT NULL,
     currency      VARCHAR(3) NOT NULL DEFAULT 'IDR',
     description   TEXT NULL,
@@ -221,7 +214,7 @@ CREATE TABLE accounting_recurring_templates (
 
 ## 5. Query Patterns Umum
 
-### Saldo region untuk periode tertentu
+### Saldo untuk periode tertentu
 ```sql
 SELECT
   COALESCE(SUM(amount_base) FILTER (WHERE direction = 'IN'), 0)  AS total_in,
@@ -230,11 +223,10 @@ SELECT
     - COALESCE(SUM(amount_base) FILTER (WHERE direction = 'OUT'), 0) AS balance
 FROM accounting_entries
 WHERE status != 'void'
-  AND region_id = $1
-  AND transaction_date BETWEEN $2 AND $3;
+  AND transaction_date BETWEEN $1 AND $2;
 ```
 
-### Breakdown per kategori
+### Breakdown per kategori (drill-down)
 ```sql
 SELECT c.code, c.name, c.direction,
        SUM(e.amount_base) AS total
@@ -261,17 +253,6 @@ GROUP BY p.code, p.name, p.direction
 ORDER BY p.direction, total DESC;
 ```
 
-### Cashflow per region (laporan global Superadmin)
-```sql
-SELECT region_id,
-       SUM(amount_base) FILTER (WHERE direction = 'IN')  AS total_in,
-       SUM(amount_base) FILTER (WHERE direction = 'OUT') AS total_out
-FROM accounting_entries
-WHERE status != 'void'
-  AND transaction_date BETWEEN $1 AND $2
-GROUP BY region_id;
-```
-
 ### Entri dari sumber sistem (future auto-record audit)
 ```sql
 SELECT * FROM accounting_entries
@@ -285,4 +266,4 @@ WHERE source = 'system' AND source_ref = $1; -- mis. subscription_request_id
 - **`amount_base` dihitung di aplikasi** saat create/update, bukan di DB, agar kurs yang dipakai tercatat eksplisit di `exchange_rate`.
 - **Void, bukan delete** — entri tidak pernah dihapus fisik; set `status = 'void'` + `void_reason`.
 - **Trigger `updated_at`** disarankan pada `accounting_entries` dan `accounting_categories` (pola sama dengan `ad_settings`).
-- **Scope enforcement di query layer** — Admin Region selalu di-filter `region_id = <region-nya>` di backend, jangan andalkan frontend.
+- **Akses hanya Superadmin** — di-enforce di layer auth/permission, bukan di schema.
