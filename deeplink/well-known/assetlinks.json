@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.yubitech.k_forum",
+      "sha256_cert_fingerprints": [
+        "16:E2:90:53:12:46:2A:26:B9:19:01:3F:66:E1:EF:CB:71:00:C9:2D:22:F2:DB:7C:81:56:6B:7A:D6:BB:87:0F"
+      ]
+    }
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "YOUR_APPLE_TEAM_ID.com.yubitech.kForum",
+        "paths": [
+          "/news/*",
+          "/qna/*",
+          "/directory/*"
+        ]
+      }
+    ]
+  }
+}
