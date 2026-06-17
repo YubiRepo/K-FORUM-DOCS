@@ -1,0 +1,242 @@
+[
+  {
+    "key": "approve_news",
+    "display_name": "Approve News",
+    "description": "Approve or reject news articles before they are published to the platform",
+    "scope": "global",
+    "category": "admin",
+    "risk_level": "high"
+  },
+  {
+    "key": "assign_role",
+    "display_name": "Assign Role",
+    "description": "Assign or revoke system roles for users at global or regional level",
+    "scope": "global",
+    "category": "admin",
+    "risk_level": "high"
+  },
+  {
+    "key": "manage_accounting",
+    "display_name": "Manage Accounting",
+    "description": "Manage internal bookkeeping/finance: ledger, categories, and reports",
+    "scope": "global",
+    "category": "admin",
+    "risk_level": "high"
+  },
+  {
+    "key": "manage_bug_reports",
+    "display_name": "Manage Bug Reports",
+    "description": "Triage and resolve bug reports submitted by platform users",
+    "scope": "global",
+    "category": "admin",
+    "risk_level": "high"
+  },
+  {
+    "key": "manage_notifications",
+    "display_name": "Manage Notifications",
+    "description": "Send and broadcast notifications to users",
+    "scope": "global",
+    "category": "admin",
+    "risk_level": "medium"
+  },
+  {
+    "key": "manage_region",
+    "display_name": "Manage Region",
+    "description": "Manage settings, data, and content within the assigned region",
+    "scope": "region",
+    "category": "admin",
+    "risk_level": "high"
+  },
+  {
+    "key": "manage_subscriptions",
+    "display_name": "Manage Subscriptions",
+    "description": "Manage subscription plans, pricing, and payment requests",
+    "scope": "global",
+    "category": "admin",
+    "risk_level": "high"
+  },
+  {
+    "key": "view_analytics",
+    "display_name": "View Analytics",
+    "description": "View analytics dashboards: community, engagement, and platform statistics",
+    "scope": "global",
+    "category": "admin",
+    "risk_level": "low"
+  },
+  {
+    "key": "ask_qna",
+    "display_name": "Ask Q&A",
+    "description": "Submit questions in the Q&A module",
+    "scope": "global",
+    "category": "content",
+    "risk_level": "low"
+  },
+  {
+    "key": "create_community",
+    "display_name": "Create Community",
+    "description": "Create a new community and automatically become its leader",
+    "scope": "global",
+    "category": "content",
+    "risk_level": "low"
+  },
+  {
+    "key": "create_event",
+    "display_name": "Create Event",
+    "description": "Create and manage events and attendee registrations",
+    "scope": "global",
+    "category": "content",
+    "risk_level": "low"
+  },
+  {
+    "key": "create_store",
+    "display_name": "Create Store / Merchant",
+    "description": "Register a company and create merchant listings in the Directory module",
+    "scope": "global",
+    "category": "content",
+    "risk_level": "low"
+  },
+  {
+    "key": "join_community",
+    "display_name": "Join Community",
+    "description": "Join public or private communities (via invite)",
+    "scope": "global",
+    "category": "content",
+    "risk_level": "low"
+  },
+  {
+    "key": "manage_announcements",
+    "display_name": "Manage Announcements",
+    "description": "Create and manage application announcements",
+    "scope": "global",
+    "category": "content",
+    "risk_level": "low"
+  },
+  {
+    "key": "manage_categories",
+    "display_name": "Manage Categories",
+    "description": "Manage community and content categories",
+    "scope": "global",
+    "category": "content",
+    "risk_level": "low"
+  },
+  {
+    "key": "manage_directory",
+    "display_name": "Manage Directory",
+    "description": "Manage the business directory: moderate merchants, companies, reviews, and inquiries",
+    "scope": "global",
+    "category": "content",
+    "risk_level": "medium"
+  },
+  {
+    "key": "manage_qna",
+    "display_name": "Manage Q&A",
+    "description": "Manage Q&A categories & FAQs and moderate questions",
+    "scope": "global",
+    "category": "content",
+    "risk_level": "low"
+  },
+  {
+    "key": "post_ads",
+    "display_name": "Post Ads",
+    "description": "Create and place ads on the platform (image, video, text, native)",
+    "scope": "global",
+    "category": "content",
+    "risk_level": "medium"
+  },
+  {
+    "key": "post_content",
+    "display_name": "Post Content",
+    "description": "Create posts and comments within a community",
+    "scope": "community",
+    "category": "content",
+    "risk_level": "low"
+  },
+  {
+    "key": "post_news",
+    "display_name": "Post News Article",
+    "description": "Create and submit news articles (requires approval for the member role)",
+    "scope": "global",
+    "category": "content",
+    "risk_level": "medium"
+  },
+  {
+    "key": "read_content",
+    "display_name": "Read Content",
+    "description": "Read news, events, directory, and public platform content",
+    "scope": "global",
+    "category": "content",
+    "risk_level": "low"
+  },
+  {
+    "key": "manage_members",
+    "display_name": "Manage Community Members",
+    "description": "Manage community members: approve joins, kick, assign community roles",
+    "scope": "community",
+    "category": "member",
+    "risk_level": "medium"
+  },
+  {
+    "key": "delete_content",
+    "display_name": "Delete Content",
+    "description": "Delete members' posts or comments within a community",
+    "scope": "community",
+    "category": "moderation",
+    "risk_level": "high"
+  },
+  {
+    "key": "manage_reports",
+    "display_name": "Manage Content Reports",
+    "description": "Review, triage, and resolve content reports from community members",
+    "scope": "community",
+    "category": "moderation",
+    "risk_level": "high"
+  },
+  {
+    "key": "moderate_posts",
+    "display_name": "Moderate Posts",
+    "description": "Moderate members' posts and comments within a community",
+    "scope": "community",
+    "category": "moderation",
+    "risk_level": "medium"
+  },
+  {
+    "key": "configure_auto_schedule",
+    "display_name": "Configure Auto Schedule",
+    "description": "Configure automatic publishing schedules for news from RSS sources",
+    "scope": "global",
+    "category": "system",
+    "risk_level": "high"
+  },
+  {
+    "key": "manage_legal_documents",
+    "display_name": "Manage Legal Documents",
+    "description": "Manage legal documents and their versions",
+    "scope": "global",
+    "category": "system",
+    "risk_level": "medium"
+  },
+  {
+    "key": "manage_news_sources",
+    "display_name": "Manage News Sources",
+    "description": "Add, edit, and remove automatic RSS / news feed sources",
+    "scope": "global",
+    "category": "system",
+    "risk_level": "high"
+  },
+  {
+    "key": "manage_system_settings",
+    "display_name": "Manage System Settings",
+    "description": "Change global platform configuration",
+    "scope": "global",
+    "category": "system",
+    "risk_level": "high"
+  },
+  {
+    "key": "view_audit_log",
+    "display_name": "View Audit Log",
+    "description": "View audit logs of system and admin activity",
+    "scope": "global",
+    "category": "system",
+    "risk_level": "low"
+  }
+]
