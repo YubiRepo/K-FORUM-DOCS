@@ -10,22 +10,37 @@ Endpoint backoffice modul Region: pengelolaan region oleh Superadmin & Admin Reg
 
 ## Daftar Isi
 
-1. [Informasi Umum](#informasi-umum)
-2. [Model Data](#model-data)
-3. [Endpoints](#endpoints)
-   - [B1. Create Region (Superadmin Only)](#b1-create-region-superadmin-only)
-   - [B2. Update Region (Superadmin Only)](#b2-update-region-superadmin-only)
-   - [B3. Deactivate/Activate Region (Superadmin Only)](#b3-deactivateactivate-region-superadmin-only)
-   - [B4. Get All Regions (Backoffice)](#b4-get-all-regions-backoffice)
-   - [B5. Get Region Detail](#b5-get-region-detail)
-   - [B6. Assign Admin to Region (Superadmin Only)](#b6-assign-admin-to-region-superadmin-only)
-   - [B7. Get Region Members](#b7-get-region-members)
-   - [B8. Approve Member Join Request](#b8-approve-member-join-request)
-   - [B9. Reject Member Join Request](#b9-reject-member-join-request)
-   - [B10. Invite Member via Email](#b10-invite-member-via-email)
-   - [B11. Resend Invitation](#b11-resend-invitation)
-   - [B12. Remove Member from Region](#b12-remove-member-from-region)
-4. [Error Handling](#error-handling)
+- [API Spec — Region Module (Backoffice)](#api-spec--region-module-backoffice)
+  - [Daftar Isi](#daftar-isi)
+  - [Informasi Umum](#informasi-umum)
+    - [Headers Global](#headers-global)
+    - [Authentication \& Authorization](#authentication--authorization)
+  - [Model Data](#model-data)
+    - [Region Object](#region-object)
+    - [RegionMembership Object](#regionmembership-object)
+    - [RegionInvitation Object](#regioninvitation-object)
+  - [Endpoints](#endpoints)
+    - [B1. Create Region (Superadmin Only)](#b1-create-region-superadmin-only)
+    - [B2. Update Region](#b2-update-region)
+    - [B3. Deactivate/Activate Region (Superadmin Only)](#b3-deactivateactivate-region-superadmin-only)
+    - [B4. Get All Regions (Backoffice)](#b4-get-all-regions-backoffice)
+    - [B5. Get Region Detail](#b5-get-region-detail)
+    - [B6. Assign Admin to Region (Superadmin Only)](#b6-assign-admin-to-region-superadmin-only)
+    - [B7. Get Region Members](#b7-get-region-members)
+    - [B8. Approve Member Join Request](#b8-approve-member-join-request)
+    - [B9. Reject Member Join Request](#b9-reject-member-join-request)
+    - [B10. Invite Member via Email](#b10-invite-member-via-email)
+    - [B11. Resend Invitation](#b11-resend-invitation)
+    - [B12. Remove Member from Region](#b12-remove-member-from-region)
+    - [B13. List Region Invitations](#b13-list-region-invitations)
+    - [B14. Cancel Invitation](#b14-cancel-invitation)
+    - [B15. Get My Pending Invitations (Self-Service)](#b15-get-my-pending-invitations-self-service)
+    - [B16. Accept Invitation (Self-Service)](#b16-accept-invitation-self-service)
+    - [B17. Reject Invitation (Self-Service)](#b17-reject-invitation-self-service)
+  - [Error Handling](#error-handling)
+    - [Standard Error Response](#standard-error-response)
+    - [Validation Error (422)](#validation-error-422)
+    - [Common HTTP Status Codes](#common-http-status-codes)
 
 ---
 
@@ -43,11 +58,11 @@ Accept-Language: <lang_code> (e.g., ko, id, en. Default: ko)
 
 Semua endpoint require **superadmin** atau **admin region** (role check). Member & guest tidak punya akses.
 
-| Role | Akses Backoffice |
-|------|------------------|
-| Superadmin | Semua endpoint |
-| Admin Region | Hanya region yang dikelolanya (lihat anotasi per-endpoint) |
-| Member / Guest | ❌ Tidak ada akses |
+| Role           | Akses Backoffice                                           |
+| -------------- | ---------------------------------------------------------- |
+| Superadmin     | Semua endpoint                                             |
+| Admin Region   | Hanya region yang dikelolanya (lihat anotasi per-endpoint) |
+| Member / Guest | ❌ Tidak ada akses                                          |
 
 > Endpoint bertanda **(Superadmin Only)** tidak dapat diakses Admin Region. Endpoint lain dapat diakses Admin Region **terbatas pada region yang ia kelola**.
 
@@ -146,15 +161,16 @@ Semua endpoint require **superadmin** atau **admin region** (role check). Member
 
 ---
 
-### B2. Update Region (Superadmin Only)
+### B2. Update Region
 
 - **URL:** `PUT /api/v1/web/regions/{region_id}`
 - **Autentikasi:** Required
-- **Authorization:** Superadmin only
+- **Authorization:** Superadmin OR Admin Region yang manage region ini
+- **Scope field:** mengubah `name`, `slug`, `description`, `image_url`. **Status** (aktif/nonaktif) **tidak** lewat sini — pakai [B3](#b3-deactivateactivate-region-superadmin-only) (Superadmin only).
 
 - **Request Body:**
   ```json
-  { "name": "KAI Bandung Raya", "description": "...", "image_url": "https://..." }
+  { "name": "KAI Bandung Raya", "slug": "bandung-raya", "description": "...", "image_url": "https://..." }
   ```
 
 - **Response (200 OK):**
@@ -416,6 +432,7 @@ Semua endpoint require **superadmin** atau **admin region** (role check). Member
 - **URL:** `POST /api/v1/web/regions/{region_id}/invitations/{invitation_id}/resend`
 - **Autentikasi:** Required
 - **Authorization:** Superadmin OR Admin Region
+- **Catatan:** `invitation_id` didapat dari [B13. List Region Invitations](#b13-list-region-invitations).
 
 - **Response (200 OK):**
   ```json
@@ -439,6 +456,134 @@ Semua endpoint require **superadmin** atau **admin region** (role check). Member
     "data": { "user_id": "uuid", "user_name": "Andi Pratama", "region_id": "region_jakarta" },
     "message": "Andi removed from KAI Jakarta"
   }
+  ```
+
+---
+
+### B13. List Region Invitations
+
+Daftar undangan email sebuah region — untuk melihat hasil [B10](#b10-invite-member-via-email) dan mendapatkan `invitation_id` untuk [B11 Resend](#b11-resend-invitation) / [B14 Cancel](#b14-cancel-invitation).
+
+- **URL:** `GET /api/v1/web/regions/{region_id}/invitations`
+- **Autentikasi:** Required
+- **Authorization:** Superadmin OR Admin Region yang manage region ini
+
+- **Query Parameters:**
+  - `status` (optional): `pending` | `accepted` | `rejected` | `expired`
+  - `search` (optional): by email
+  - `limit`, `offset`
+
+- **Response (200 OK):**
+  ```json
+  {
+    "data": [
+      {
+        "id": "invite_123",
+        "region_id": "region_jakarta",
+        "email": "user1@example.com",
+        "role": "member",
+        "status": "pending",
+        "invited_by_name": "Admin Jakarta",
+        "created_at": "2026-05-26T10:00:00.000Z",
+        "expires_at": "2026-05-27T10:00:00.000Z",
+        "accepted_at": null
+      }
+    ],
+    "pagination": { "limit": 20, "offset": 0, "total": 1 },
+    "meta": { "pending_count": 1, "expired_count": 0 }
+  }
+  ```
+
+---
+
+### B14. Cancel Invitation
+
+Batalkan undangan yang masih `pending`. Undangan yang sudah `accepted` tidak bisa dibatalkan.
+
+- **URL:** `DELETE /api/v1/web/regions/{region_id}/invitations/{invitation_id}`
+- **Autentikasi:** Required
+- **Authorization:** Superadmin OR Admin Region yang manage region ini
+
+- **Response (200 OK):**
+  ```json
+  { "data": { "invitation_id": "invite_123", "status": "cancelled" }, "message": "Invitation cancelled" }
+  ```
+
+- **Response (409 Conflict — Already accepted):**
+  ```json
+  { "message": "Invitation already accepted and cannot be cancelled" }
+  ```
+
+---
+
+### B15. Get My Pending Invitations (Self-Service)
+
+Undangan region yang ditujukan ke **user yang sedang login** (mis. di-assign jadi admin region via email, atau diundang jadi member). Agar penerima bisa merespons langsung dari backoffice. Scope: undangan milik user (email token harus match `invitation.email`).
+
+- **URL:** `GET /api/v1/web/regions/invitations/pending`
+- **Autentikasi:** Required (semua role backoffice — undangan tidak terbatas role)
+- **Query Parameters:** `limit` (default 20, max 50), `offset`
+
+- **Response (200 OK):**
+  ```json
+  {
+    "data": [
+      {
+        "id": "invite_123",
+        "region_id": "region_jakarta",
+        "region_name": "KAI Jakarta",
+        "region_image": "https://...",
+        "role": "admin",
+        "invited_by_name": "Super Admin",
+        "status": "pending",
+        "created_at": "2026-05-26T10:00:00.000Z",
+        "expires_at": "2026-05-27T10:00:00.000Z",
+        "time_left_hours": 23
+      }
+    ],
+    "pagination": { "limit": 20, "offset": 0, "total": 1 }
+  }
+  ```
+
+---
+
+### B16. Accept Invitation (Self-Service)
+
+- **URL:** `POST /api/v1/web/regions/invitations/{invitation_id}/accept`
+- **Autentikasi:** Required (email token harus match `invitation.email`)
+- **Authorization:** Invitation harus `status=pending` dan belum expired
+
+- **Response (200 OK):**
+  ```json
+  {
+    "data": {
+      "membership_id": "uuid",
+      "region_id": "region_jakarta",
+      "region_name": "KAI Jakarta",
+      "role": "admin",
+      "status": "active",
+      "joined_at": "2026-05-26T10:00:00.000Z"
+    },
+    "message": "Bergabung ke KAI Jakarta ✓"
+  }
+  ```
+
+- **Response (410 Gone — Expired):** `{ "message": "Invitation has expired. Admin can send a new one." }`
+- **Response (403 Forbidden — Email mismatch):** `{ "message": "This invitation was sent to a different email" }`
+
+> **Catatan:** Saat undangan ber-`role: admin` diterima, backend membuat membership region **dan** memberi role/scope admin region (admin_scopes) ke user — sehingga region langsung muncul saat user membuka [B5 Get Region Detail](#b5-get-region-detail) untuk region tersebut.
+
+---
+
+### B17. Reject Invitation (Self-Service)
+
+- **URL:** `POST /api/v1/web/regions/invitations/{invitation_id}/reject`
+- **Autentikasi:** Required
+- **Authorization:** Invitation harus `status=pending`
+
+- **Response (200 OK):**
+  ```json
+  { "data": { "invitation_id": "invite_123", "status": "rejected" }, "message": "Invitation rejected" }
   ```
 
 ---
