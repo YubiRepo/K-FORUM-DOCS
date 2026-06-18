@@ -268,6 +268,7 @@ Semua endpoint require **superadmin** atau **admin region** (role check). Member
 - **URL:** `POST /api/v1/web/regions/{region_id}/assign-admin`
 - **Autentikasi:** Required
 - **Authorization:** Superadmin only
+- **Catatan:** Untuk **menetapkan/mengganti** admin penanggung jawab region secara langsung (set `admin_id`). Admin Region **tidak** pakai ini — untuk menambah co-admin, Admin Region memakai [B10 Invite Member](#b10-invite-member-via-email) dengan `role: admin`.
 
 - **Request Body:**
   ```json
@@ -406,6 +407,7 @@ Semua endpoint require **superadmin** atau **admin region** (role check). Member
 - **URL:** `POST /api/v1/web/regions/{region_id}/invite`
 - **Autentikasi:** Required
 - **Authorization:** Superadmin OR Admin Region yang manage region ini
+- **Catatan role:** `role` boleh `member` **atau `admin`** — **Admin Region boleh mengundang admin lain (co-admin)** untuk region yang ia kelola. Ini berbeda dari [B6 Assign Admin](#b6-assign-admin-to-region-superadmin-only) yang **Superadmin-only** (B6 dipakai Superadmin untuk menetapkan/mengganti admin region secara langsung; B10 adalah undangan via email yang harus di-accept penerima — lihat [B16](#b16-accept-invitation-self-service)).
 
 - **Request Body:**
   ```json
