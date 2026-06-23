@@ -66,6 +66,7 @@ Saat superadmin create atau edit event langsung dari backoffice, images tetap di
   },
   "status": "pending_approval",
   "approval_status": "pending",
+  "is_featured": false,
   "submitted_at": "2026-05-25T09:00:00.000Z",
   "created_at": "2026-05-25T08:00:00.000Z"
 }
@@ -108,6 +109,7 @@ Saat superadmin create atau edit event langsung dari backoffice, images tetap di
   "approved_by": null,
   "approval_notes": null,
   "rejection_reason": null,
+  "is_featured": false,
   "save_count": 0,
   "share_count": 0,
   "created_at": "2026-05-25T08:00:00.000Z",
@@ -167,6 +169,7 @@ Ambil semua events dengan filter lengkap — untuk management dan monitoring.
   - `event_type` (optional): `offline`, `online`, `hybrid`
   - `category_id` (optional): Filter by kategori
   - `organizer_id` (optional): Filter by organizer user
+  - `is_featured` (optional): `true` / `false` — filter event yang sedang di-feature
   - `date_from` (optional): Filter event_date from
   - `date_to` (optional): Filter event_date to
   - `sort` (optional): `created_at`, `-created_at`, `event_date`, `-event_date`, `submitted_at` (default: `-created_at`)
@@ -193,6 +196,7 @@ Ambil semua events dengan filter lengkap — untuk management dan monitoring.
         },
         "status": "pending_approval",
         "approval_status": "pending",
+        "is_featured": false,
         "submitted_at": "2026-05-25T09:00:00.000Z",
         "created_at": "2026-05-25T08:00:00.000Z"
       },
@@ -212,6 +216,7 @@ Ambil semua events dengan filter lengkap — untuk management dan monitoring.
         },
         "status": "published",
         "approval_status": "approved",
+        "is_featured": true,
         "submitted_at": "2026-05-20T09:00:00.000Z",
         "created_at": "2026-05-20T08:00:00.000Z"
       }
@@ -225,7 +230,8 @@ Ambil semua events dengan filter lengkap — untuk management dan monitoring.
       "total_pending": 5,
       "total_published": 89,
       "total_rejected": 12,
-      "total_cancelled": 28
+      "total_cancelled": 28,
+      "total_featured": 7
     }
   }
   ```
@@ -316,6 +322,7 @@ Ambil detail lengkap satu event untuk review.
       "approved_by": null,
       "approval_notes": null,
       "rejection_reason": null,
+      "is_featured": false,
       "save_count": 0,
       "share_count": 0,
       "created_at": "2026-05-24T09:00:00.000Z",
@@ -527,9 +534,12 @@ Superadmin edit event apapun statusnya.
     "venue_name": "Gedung Serbaguna Senayan",
     "venue_address": "Jl. Asia Afrika, Jakarta Pusat",
     "event_date": "2026-08-05",
-    "event_time": "10:00"
+    "event_time": "10:00",
+    "is_featured": true
   }
   ```
+
+  > `is_featured` opsional di sini — toggle featured juga bisa lewat endpoint khusus (lihat section 10). Validasi soft-limit yang sama berlaku: kalau set `true` sementara sudah ada 10 event featured, response tetap sukses tapi disertai `warning`.
 
 - **Response (Success 200)**:
   ```json
@@ -541,6 +551,7 @@ Superadmin edit event apapun statusnya.
       "images": [
         "https://cdn.example.com/events/uploads/img_new1.jpg"
       ],
+      "is_featured": true,
       "updated_at": "2026-05-25T13:00:00.000Z"
     },
     "message": "Event updated successfully"
@@ -549,7 +560,81 @@ Superadmin edit event apapun statusnya.
 
 ---
 
-### 10. Delete Event (Hard Delete)
+### 10. Toggle Featured Event
+
+Set atau unset status featured sebuah event — kontrol editorial untuk highlight event di mobile (carousel/banner). Hanya Superadmin.
+
+> **Catatan business rule:** Featured adalah keputusan editorial murni dari backoffice. Field `is_featured` **tidak pernah** di-set oleh organizer/member maupun otomatis — selalu lewat Superadmin via endpoint ini atau via Edit Event.
+
+- **URL**: `PATCH /api/v1/web/events/{event_id}/featured`
+- **Autentikasi**: Yes (Superadmin)
+
+- **Request Body**:
+  ```json
+  {
+    "is_featured": true
+  }
+  ```
+
+- **Request Validation**:
+  - `is_featured`: Required, boolean.
+  - Event harus berstatus `published`. Event `draft`, `pending_approval`, `rejected`, atau `cancelled` tidak boleh di-feature → return `422`.
+
+- **Soft limit (max 10 featured):** Rekomendasi max 10 event featured aktif (selaras dengan mobile). Limit ini **TIDAK diblok** — kalau set `true` saat sudah ada 10+ featured, request tetap sukses (`200`) tapi response menyertakan field `warning` agar UI bisa menampilkan peringatan ke Superadmin.
+
+- **Response (Success 200 — di bawah limit)**:
+  ```json
+  {
+    "data": {
+      "id": "event_200",
+      "title": "Official Platform Event 2026",
+      "is_featured": true,
+      "featured_count": 8,
+      "updated_at": "2026-05-25T13:10:00.000Z"
+    },
+    "message": "Event featured status updated"
+  }
+  ```
+
+- **Response (Success 200 — melebihi soft limit)**:
+  ```json
+  {
+    "data": {
+      "id": "event_200",
+      "title": "Official Platform Event 2026",
+      "is_featured": true,
+      "featured_count": 11,
+      "updated_at": "2026-05-25T13:10:00.000Z"
+    },
+    "message": "Event featured status updated",
+    "warning": "Sudah ada 11 event yang di-feature. Disarankan maksimal 10 untuk menjaga kualitas highlight."
+  }
+  ```
+
+- **Response (Success 200 — unset featured)**:
+  ```json
+  {
+    "data": {
+      "id": "event_200",
+      "title": "Official Platform Event 2026",
+      "is_featured": false,
+      "featured_count": 7,
+      "updated_at": "2026-05-25T13:12:00.000Z"
+    },
+    "message": "Event featured status updated"
+  }
+  ```
+
+- **Response (Error 422 — event belum published)**:
+  ```json
+  {
+    "message": "Hanya event berstatus published yang bisa di-feature"
+  }
+  ```
+
+---
+
+### 11. Delete Event (Hard Delete)
 
 Hapus event permanen dari database. Gunakan dengan hati-hati.
 
@@ -569,7 +654,7 @@ Hapus event permanen dari database. Gunakan dengan hati-hati.
 
 ---
 
-### 11. Manage Event Categories
+### 12. Manage Event Categories
 
 CRUD untuk master data kategori event.
 
@@ -618,7 +703,7 @@ CRUD untuk master data kategori event.
 
 ---
 
-### 12. Event Module Settings
+### 13. Event Module Settings
 
 Superadmin configure pengaturan event module secara global.
 
@@ -776,12 +861,15 @@ Superadmin configure pengaturan event module secara global.
 - ✅ Superadmin buat event langsung published tanpa approval
 - ✅ Selalu sertakan rejection reason yang jelas dan actionable
 - ✅ Log semua approval/rejection actions (audit trail)
+- ✅ Featured adalah keputusan editorial — hanya event `published` yang boleh di-feature
+- ✅ Tampilkan warning di UI kalau featured melebihi 10 (soft limit, tidak diblok)
 
 ### ❌ DON'T:
 - ❌ Jangan include `region_id` dalam request/response event
 - ❌ Tidak ada field `favorite_count` — hanya `save_count` dan `share_count`
 - ❌ Jangan approve event tanpa review isi kontennya
 - ❌ Jangan reject tanpa memberikan reason yang jelas
+- ❌ Jangan set `is_featured` dari sisi organizer/member atau otomatis — selalu lewat Superadmin
 
 ### Approval Authorization:
 

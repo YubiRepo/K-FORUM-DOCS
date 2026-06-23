@@ -66,6 +66,7 @@ Sebelum create/edit event, images harus diupload terlebih dahulu via endpoint up
   },
   "is_saved": false,
   "is_scheduled": false,
+  "is_featured": false,
   "status": "published"
 }
 ```
@@ -104,6 +105,7 @@ Sebelum create/edit event, images harus diupload terlebih dahulu via endpoint up
   "status": "published",
   "is_saved": true,
   "is_scheduled": true,
+  "is_featured": false,
   "save_count": 45,
   "share_count": 8,
   "published_at": "2026-05-20T10:00:00.000Z",
@@ -347,7 +349,95 @@ Ambil daftar events yang sudah published. Dapat difilter by tipe, venue/kota, ka
 
 ---
 
-### 4. View Event Detail
+### 4. Get Featured Events
+
+Ambil daftar event yang di-highlight (featured) oleh Superadmin — buat carousel/banner di home. Status featured murni dikontrol dari backoffice; mobile cuma konsumsi.
+
+- **URL**: `GET /api/v1/mobile/events/featured`
+- **Autentikasi**: Optional (`is_saved`/`is_scheduled` hanya muncul kalau authenticated)
+- **Query Parameters**:
+  - `limit` (optional, default: 5, max: 20)
+
+- **Response (Success 200)**:
+  ```json
+  {
+    "data": [
+      {
+        "id": "event_125",
+        "title": "Official Platform Event 2026",
+        "cover_image": "https://cdn.example.com/events/uploads/img_uuid1.jpg",
+        "event_type": "hybrid",
+        "venue_name": "Jakarta Convention Center",
+        "venue_address": "Jl. Gatot Subroto, Jakarta Selatan",
+        "event_date": "2026-08-01",
+        "event_time": "09:00",
+        "category": { "id": "uuid", "name": "Community" },
+        "organizer": {
+          "id": "uuid",
+          "name": "Admin KAI",
+          "avatar": "https://cdn.example.com/avatars/admin.jpg"
+        },
+        "registration_url": "https://eventbrite.com/e/official-event-2026",
+        "is_saved": false,
+        "is_scheduled": false,
+        "is_featured": true
+      }
+    ]
+  }
+  ```
+
+> Hanya event berstatus `published` yang muncul. Default urut by `event_date` ascending (event terdekat duluan).
+
+---
+
+### 5. Get Upcoming Events
+
+Ambil daftar event yang akan datang, diurutkan dari yang paling dekat (`event_date` ascending). Hanya event `published` yang `event_date`-nya >= hari ini.
+
+- **URL**: `GET /api/v1/mobile/events/upcoming`
+- **Autentikasi**: Optional (`is_saved`/`is_scheduled` hanya muncul kalau authenticated)
+- **Query Parameters**:
+  - `category_id` (optional): Filter by kategori
+  - `event_type` (optional): `offline`, `online`, `hybrid`
+  - `limit` (optional, default: 10, max: 50)
+  - `offset` (optional, default: 0)
+
+- **Response (Success 200)**:
+  ```json
+  {
+    "data": [
+      {
+        "id": "event_123",
+        "title": "Futsal Tournament 2026",
+        "cover_image": "https://cdn.example.com/events/uploads/img_uuid1.jpg",
+        "event_type": "offline",
+        "venue_name": "GOR Senayan",
+        "venue_address": "Jl. Pintu I Senayan, Jakarta Pusat",
+        "event_date": "2026-06-15",
+        "event_time": "14:00",
+        "category": { "id": "uuid", "name": "Sports" },
+        "organizer": {
+          "id": "uuid",
+          "name": "Andi Pratama",
+          "avatar": "https://cdn.example.com/avatars/andi.jpg"
+        },
+        "registration_url": "https://eventbrite.com/e/futsal-2026",
+        "is_saved": false,
+        "is_scheduled": false,
+        "is_featured": false
+      }
+    ],
+    "pagination": {
+      "limit": 10,
+      "offset": 0,
+      "total": 42
+    }
+  }
+  ```
+
+---
+
+### 6. View Event Detail
 
 Ambil detail lengkap satu event.
 
@@ -394,7 +484,7 @@ Ambil detail lengkap satu event.
 
 ---
 
-### 5. Edit Own Event
+### 7. Edit Own Event
 
 Edit event milik sendiri. Hanya bisa edit event berstatus `draft` atau `rejected`.
 
@@ -439,7 +529,7 @@ Edit event milik sendiri. Hanya bisa edit event berstatus `draft` atau `rejected
 
 ---
 
-### 6. Cancel Event
+### 8. Cancel Event
 
 Cancel event yang sudah dibuat (bisa dari draft atau published).
 
@@ -468,7 +558,7 @@ Cancel event yang sudah dibuat (bisa dari draft atau published).
 
 ---
 
-### 7. Get My Events
+### 9. Get My Events
 
 Ambil daftar events milik sendiri (semua status).
 
@@ -514,7 +604,7 @@ Ambil daftar events milik sendiri (semua status).
 
 ---
 
-### 8. Save / Bookmark Event
+### 10. Save / Bookmark Event
 
 Simpan event ke daftar bookmark.
 
@@ -543,7 +633,7 @@ Simpan event ke daftar bookmark.
 
 ---
 
-### 9. Unsave Event
+### 11. Unsave Event
 
 Hapus event dari daftar bookmark.
 
@@ -559,7 +649,7 @@ Hapus event dari daftar bookmark.
 
 ---
 
-### 10. Add to Schedule
+### 12. Add to Schedule
 
 Tambahkan event ke jadwal pribadi. User bisa sekaligus meminta data untuk export ke kalender eksternal.
 
@@ -606,7 +696,7 @@ Tambahkan event ke jadwal pribadi. User bisa sekaligus meminta data untuk export
 
 ---
 
-### 11. Get Calendar Export Links
+### 13. Get Calendar Export Links
 
 Ambil ulang link export kalender untuk event yang sudah dijadwalkan — berguna jika user ingin export ke kalender lain di lain waktu.
 
@@ -639,7 +729,7 @@ Ambil ulang link export kalender untuk event yang sudah dijadwalkan — berguna 
 
 ---
 
-### 12. Remove from Schedule
+### 14. Remove from Schedule
 
 Hapus event dari jadwal pribadi.
 
@@ -655,7 +745,7 @@ Hapus event dari jadwal pribadi.
 
 ---
 
-### 13. Share Event
+### 15. Share Event
 
 Catat event yang di-share (untuk analytics & share link generation).
 
@@ -685,7 +775,7 @@ Catat event yang di-share (untuk analytics & share link generation).
 
 ---
 
-### 14. Get My Saved Events
+### 16. Get My Saved Events
 
 Ambil daftar event yang sudah di-bookmark.
 
@@ -720,7 +810,7 @@ Ambil daftar event yang sudah di-bookmark.
 
 ---
 
-### 15. Get My Schedule
+### 17. Get My Schedule
 
 Ambil daftar event yang ada di jadwal pribadi.
 
@@ -759,7 +849,7 @@ Ambil daftar event yang ada di jadwal pribadi.
 
 ---
 
-### 16. Get Event Categories
+### 18. Get Event Categories
 
 Ambil daftar kategori event untuk dropdown saat create event.
 
@@ -876,6 +966,7 @@ Ambil daftar kategori event untuk dropdown saat create event.
 - ❌ Member standard tidak bisa create event
 - ❌ Jangan edit event yang sedang `pending_approval` atau sudah `published`
 - ❌ Tidak ada fitur favorite — hanya save/bookmark
+- ❌ `is_featured` read-only di mobile — tidak ada cara set/toggle dari client (editorial, dikontrol Superadmin via backoffice)
 
 ### Status Flow:
 
