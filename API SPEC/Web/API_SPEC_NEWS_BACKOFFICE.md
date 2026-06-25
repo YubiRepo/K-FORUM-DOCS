@@ -37,6 +37,7 @@ List artikel dengan filter (semua status, untuk backoffice).
 - `status` (optional): `draft`, `pending_approval`, `published`, `archived`, `rejected`
 - `source_id` (optional): Filter by source
 - `category_id` (optional): Filter by kategori
+- `news_scope_id` (optional): Filter by scope (asal/fokus geografis)
 - `is_manual` (optional): `true`/`false`
 - `q` (optional): Search keyword
 - `limit` (optional, default: 20), `offset` (optional, default: 0)
@@ -54,6 +55,7 @@ List artikel dengan filter (semua status, untuk backoffice).
       "author_label": "Korean Association Indonesia",
       "source": { "id": "src_detik", "name": "Detik.com" },
       "category": { "id": "cat_sport", "name": "Olahraga" },
+      "scope": { "id": "scp_id", "name": "Berita Indonesia", "slug": "indonesia" },
       "view_count": 4820,
       "like_count": 152,
       "comment_count": 23,
@@ -85,6 +87,7 @@ Detail artikel + semua translations.
     "id": "art_001",
     "source_id": "src_detik",
     "category_id": "cat_sport",
+    "news_scope_id": "scp_id",
     "original_language": "id",
     "is_manual": false,
     "original_url": "https://detik.com/sport/12345",
@@ -140,6 +143,7 @@ Buat artikel manual. Editor pilih bahasa utama + tulis konten.
 ```json
 {
   "category_id": "cat_sport",
+  "news_scope_id": "scp_id",
   "original_language": "id",
   "author_label": "KAI Jakarta",
   "author_region_id": "region_jakarta",
@@ -159,6 +163,7 @@ Buat artikel manual. Editor pilih bahasa utama + tulis konten.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `category_id` | `string` | Yes | FK kategori |
+| `news_scope_id` | `string` | No | FK scope (asal/fokus geografis). Editor pilih saat tulis artikel manual |
 | `original_language` | `string` | Yes | Kode bahasa utama (mis. `id`) |
 | `author_label` | `string` | Yes | Label asal (mis. `KAI Jakarta`) |
 | `author_region_id` | `string` | No | null jika KAI Pusat |
@@ -357,6 +362,7 @@ List semua news source + config.
       "name": "Detik.com",
       "base_url": "https://rss.detik.com/",
       "original_language": "id",
+      "default_scope": { "id": "scp_id", "name": "Berita Indonesia", "slug": "indonesia" },
       "schedule": "0 */2 * * *",
       "last_scraped_at": "2026-06-04T08:00:00.000Z",
       "auto_publish": false,
@@ -370,7 +376,7 @@ List semua news source + config.
         "extra_fields": null
       },
       "categories": [
-        { "id": "sc_1", "category_key": "sport", "url_suffix": "sepakbola", "article_limit": 10, "is_active": true }
+        { "id": "sc_1", "category_key": "sport", "category_id": "cat_sport", "url_suffix": "sepakbola", "article_limit": 10, "is_active": true }
       ]
     }
   ]
@@ -394,6 +400,7 @@ Daftarkan source baru + selector.
   "name": "Kompas",
   "base_url": "https://www.kompas.com/",
   "original_language": "id",
+  "default_scope_id": "scp_id",
   "schedule": "0 */6 * * *",
   "auto_publish": false,
   "ai_cleanup": false,
@@ -417,7 +424,7 @@ Daftarkan source baru + selector.
 
 ### 14. PUT /sources/{source_id}
 
-Edit source. Usergod bisa ubah semua; Superadmin bisa ubah config operasional (schedule, auto_publish, ai_cleanup, auto_translate, is_active).
+Edit source. Usergod bisa ubah semua; Superadmin bisa ubah config operasional (schedule, auto_publish, ai_cleanup, auto_translate, default_scope_id, is_active).
 
 **Permission**: `manage_news_source` (full) atau `manage_news_source_config` (config saja)
 
@@ -474,12 +481,22 @@ Tambah kategori scraping untuk source.
 ```json
 {
   "category_key": "ekonomi",
+  "category_id": "cat_eco",
   "url_suffix": "ekonomi/rss",
   "url_override": null,
   "article_limit": 15,
   "is_active": true
 }
 ```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `category_key` | `string` | Yes | Input manual — slug/path feed sesuai source |
+| `category_id` | `string` | No | Mapping ke kategori KAI. Hasil scrape dari `category_key` ini di-assign ke kategori ini. Null = fallback `umum` |
+| `url_suffix` | `string` | No | Append ke base_url |
+| `url_override` | `string` | No | URL feed penuh jika pola beda |
+| `article_limit` | `int` | No | Default 10 |
+| `is_active` | `bool` | No | Default true |
 
 **Response (201 Created)**:
 ```json
@@ -568,6 +585,73 @@ Edit / hapus kategori news.
 **Response (200 OK)**:
 ```json
 { "message": "Category updated" }
+```
+
+---
+
+## Bagian D2 — News Scopes (Master)
+
+Master scope asal/fokus geografis berita. Dikelola Superadmin via permission `manage_news_category` (sama dengan kategori — keduanya master klasifikasi konten).
+
+### 22b. GET /scopes
+
+List semua scope news.
+
+**Permission**: `manage_news_category`
+
+**Method**: GET — `/api/v1/web/news/scopes`
+
+**Response (200 OK)**:
+```json
+{
+  "data": [
+    { "id": "scp_id", "name": "Berita Indonesia", "slug": "indonesia", "is_active": true, "sort_order": 1 },
+    { "id": "scp_kr", "name": "Berita Korea", "slug": "korea", "is_active": true, "sort_order": 2 },
+    { "id": "scp_kri", "name": "Berita Korea di Indonesia", "slug": "korea_indonesia", "is_active": true, "sort_order": 3 }
+  ]
+}
+```
+
+---
+
+### 22c. POST /scopes
+
+Buat scope baru.
+
+**Permission**: `manage_news_category` (Superadmin)
+
+**Method**: POST — `/api/v1/web/news/scopes`
+
+**Request Body**:
+```json
+{ "name": "Berita Korea di Indonesia", "slug": "korea_indonesia", "is_active": true, "sort_order": 3 }
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | `string` | Yes | Nama tampil |
+| `slug` | `string` | Yes | Unik, huruf kecil (mis. `korea_indonesia`) |
+| `is_active` | `bool` | No | Default true |
+| `sort_order` | `int` | No | Default 0 |
+
+**Response (201 Created)**:
+```json
+{ "data": { "id": "scp_kri" }, "message": "Scope created" }
+```
+
+---
+
+### 22d. PUT /scopes/{scope_id} & DELETE /scopes/{scope_id}
+
+Edit / hapus scope news. Saat scope dihapus, `articles.news_scope_id` & `news_sources.default_scope_id` yang merujuknya di-set null (ON DELETE SET NULL).
+
+**Permission**: `manage_news_category`
+
+**Method**: PUT / DELETE — `/api/v1/web/news/scopes/{scope_id}`
+
+**Response (200 OK)**:
+```json
+{ "message": "Scope updated" }
 ```
 
 ---

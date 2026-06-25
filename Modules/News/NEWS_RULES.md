@@ -12,16 +12,17 @@ Dokumen ini menjelaskan aturan bisnis modul News dan bagaimana user berinteraksi
 4. [Siapa Bisa Apa](#siapa-bisa-apa)
 5. [Visibility: Tidak Scoped + Label Asal](#visibility-tidak-scoped--label-asal)
 6. [Kategori News](#kategori-news)
-7. [Fitur Scraping & Scheduling](#fitur-scraping--scheduling)
-8. [Status & Lifecycle](#status--lifecycle)
-9. [Multi-Language & Translation](#multi-language--translation)
-10. [AI Content Cleanup](#ai-content-cleanup)
-11. [Interaksi Member](#interaksi-member)
-12. [Article Views](#article-views)
-13. [Comment](#comment)
-14. [Use Cases](#use-cases)
-15. [Ringkasan Aturan](#ringkasan-aturan)
-16. [Keputusan yang Masih Terbuka](#keputusan-yang-masih-terbuka)
+7. [News Scope](#news-scope)
+8. [Fitur Scraping & Scheduling](#fitur-scraping--scheduling)
+9. [Status & Lifecycle](#status--lifecycle)
+10. [Multi-Language & Translation](#multi-language--translation)
+11. [AI Content Cleanup](#ai-content-cleanup)
+12. [Interaksi Member](#interaksi-member)
+13. [Article Views](#article-views)
+14. [Comment](#comment)
+15. [Use Cases](#use-cases)
+16. [Ringkasan Aturan](#ringkasan-aturan)
+17. [Keputusan yang Masih Terbuka](#keputusan-yang-masih-terbuka)
 
 ---
 
@@ -51,6 +52,7 @@ Entitas inti yang merepresentasikan satu artikel berita.
 | Atribut | Keterangan & Contoh |
 |---|---|
 | `source_id` | FK ke `news_sources`. Kosong (null) jika artikel ditulis manual, terisi jika hasil scraping |
+| `news_scope_id` | FK ke `news_scopes`. Klasifikasi **asal/fokus geografis** berita: `indonesia`, `korea`, atau `korea_indonesia`. Saat scraping diwariskan dari `news_sources.default_scope_id`; Editor bisa override. Boleh kosong (belum dipetakan) |
 | `original_language` | Bahasa asli artikel. Contoh: `id`. Mengikuti source jika scraping, dipilih Editor jika manual |
 | `is_manual` | `true` jika ditulis manual oleh Editor/member, `false` jika hasil scraping |
 | `status` | Status artikel: `draft`, `pending_approval`, `published`, `archived`, `rejected` |
@@ -67,7 +69,9 @@ Entitas inti yang merepresentasikan satu artikel berita.
 | `published_by_label` | Label penerbit yang **tampil ke pembaca**. Contoh: `Korean Association Indonesia` atau `KAI Jakarta` |
 | `published_at` | Waktu artikel tayang |
 
-> **Penting:** Article **tidak** punya field `scope` (global/regional). Semua article visible global. Field region di sini hanya **label asal**.
+> **Penting — bedakan dua makna "scope":**
+> - **Visibility scope** (global/regional) → Article **tidak** punya ini. Semua article visible global ke semua user. `author_region_id` di sini hanya **label asal**, bukan pembatas siapa yang boleh lihat.
+> - **News scope** (`news_scope_id`) → ini **klasifikasi konten** (asal/fokus geografis: Indonesia / Korea / Korea di Indonesia), dipakai sebagai **filter** di UI. Tidak membatasi visibility — artikel scope `korea` tetap bisa dilihat semua orang, cuma bisa difilter terpisah. Lihat bagian [News Scope](#news-scope).
 
 ### 2. Article Translation
 
@@ -97,6 +101,7 @@ Sumber berita eksternal untuk scraping. Didaftarkan oleh **Usergod**, dikonfigur
 | `name` | Nama tampil sumber. Contoh: `Detik.com`, `Kompas`, `KAI Official` |
 | `base_url` | URL dasar feed sumber. Contoh: `https://www.cnnindonesia.com/` |
 | `original_language` | Kode bahasa asli konten sumber ini. Contoh: `id` (untuk portal Indonesia), `ko` (portal Korea) |
+| `default_scope_id` | FK ke `news_scopes`. Scope default yang diwariskan ke setiap artikel hasil scraping dari source ini. Contoh: Antara/Detik → `indonesia`, Yonhap/Korea Times → `korea`. Boleh kosong; Editor tetap bisa set scope per artikel |
 | `schedule` | Jadwal scraping dalam format cron expression. Contoh: `0 */6 * * *` = tiap 6 jam, `0 8,12,17 * * *` = jam 8/12/17 setiap hari, `0 8 * * 1-5` = jam 8 tiap hari kerja |
 | `last_scraped_at` | Timestamp terakhir kali scraping berhasil. Diisi sistem otomatis, dipakai scheduler untuk hitung jadwal berikutnya |
 | `auto_publish` | `true` = hasil scraping langsung tayang ke user. `false` = masuk antrian draft untuk direview Editor dulu. Default: `false` |
@@ -130,7 +135,8 @@ Definisi kategori yang di-scrape dari suatu source beserta batas artikel per fet
 | Atribut | Keterangan & Contoh |
 |---|---|
 | `source_id` | FK ke `news_sources` |
-| `category_key` | Nama kategori bebas (string). Contoh: `sport`, `ekonomi`, `lifestyle`, `internasional` |
+| `category_key` | **Input manual** — nama/slug/path kategori sesuai feed source. String bebas. Contoh: `sport`, `ekonomi`, `lifestyle`, `sepakbola.xml`. Dipakai untuk membangun URL feed |
+| `category_id` | FK ke `news_categories` — **mapping** hasil scrape dari `category_key` ini ke kategori KAI mana. Saat scraping, `articles.category_id` diisi dari sini. Kosong (null) = belum dipetakan (artikel fallback ke kategori `umum`) |
 | `url_suffix` | Bagian URL yang ditambahkan ke `base_url` untuk kategori ini. Contoh: jika base_url = `https://rss.tempo.co/` dan suffix = `nasional`, maka feed = `https://rss.tempo.co/nasional` |
 | `url_override` | URL feed penuh, dipakai jika pola tidak cocok dengan base_url + suffix. Contoh: `https://www.antaranews.com/rss/terkini.xml`. Kosongkan jika cukup pakai `url_suffix` |
 | `article_limit` | Maksimal artikel yang diambil per sekali fetch dari kategori ini. Contoh: `10` (ambil 10 artikel terbaru tiap scraping) |
@@ -287,6 +293,30 @@ Sistem kategori seperti portal berita umum (mis. Politik, Ekonomi, Olahraga, Tek
 
 ---
 
+## News Scope
+
+Dimensi klasifikasi **terpisah dan orthogonal** dari kategori. Kalau kategori menjawab *"berita tentang apa"* (Olahraga, Ekonomi), scope menjawab *"berita dari/tentang mana"* secara geografis.
+
+### Nilai Scope (Phase 1)
+
+| Slug | Nama | Maksud |
+|---|---|---|
+| `indonesia` | Berita Indonesia | Berita umum dari/tentang Indonesia |
+| `korea` | Berita Korea | Berita dari/tentang Korea |
+| `korea_indonesia` | Berita Korea di Indonesia | Komunitas Korea di Indonesia, hubungan bilateral, topik lintas keduanya |
+
+> Scope disimpan sebagai master table (`news_scopes`) dengan FK, bukan enum hardcoded — supaya scope baru (mis. `bilateral`, `asean`) bisa ditambah tanpa ubah skema. Dikelola oleh **Superadmin** (CRUD, urutan, aktif/nonaktif).
+
+### Aturan
+
+- **Orthogonal dengan kategori.** Satu artikel punya satu kategori *dan* satu scope. Contoh: artikel Olahraga + scope Korea, atau Ekonomi + scope Korea di Indonesia.
+- **Satu artikel = satu scope** (bukan multi). Boleh kosong jika belum dipetakan.
+- **Bukan visibility.** Scope hanya untuk filtering/browsing di UI. Semua artikel tetap visible global ke semua user, apa pun scope-nya. (Beda dengan Announcement yang scope-nya membatasi siapa yang lihat.)
+- **Default dari source.** Source punya `default_scope_id`. Saat scraping, artikel mewarisi scope dari source-nya. Editor bisa override per artikel (mis. artikel Antara yang membahas komunitas Korea di Jakarta → ubah ke `korea_indonesia`).
+- **Artikel manual.** Editor pilih scope sendiri saat tulis artikel.
+
+---
+
 ## Fitur Scraping & Scheduling
 
 Eksklusif KAI Pusat. Dipisah menjadi dua tingkat tanggung jawab:
@@ -304,9 +334,11 @@ Eksklusif KAI Pusat. Dipisah menjadi dua tingkat tanggung jawab:
 
 Superadmin bisa update semua config di `news_sources` (schedule, auto_publish, ai_cleanup, auto_translate, is_active) dan mengatur `source_categories` per source:
 
-1. Tambah/edit kategori yang di-scrape (category_key, url_suffix/override)
-2. Set `article_limit` — maksimal artikel per fetch per kategori
-3. Activate/deactivate kategori tanpa hapus konfigurasi
+1. Tambah/edit kategori yang di-scrape (`category_key`, url_suffix/override)
+2. Mapping `category_key` → `category_id` (kategori KAI) agar hasil scrape masuk kategori yang benar
+3. Set `article_limit` — maksimal artikel per fetch per kategori
+4. Set `default_scope_id` di level source (Indonesia/Korea/Korea di Indonesia)
+5. Activate/deactivate kategori tanpa hapus konfigurasi
 
 ### Cara Scheduler Bekerja
 
@@ -353,6 +385,9 @@ Fetch detail tiap artikel baru (concurrent, dengan rate limit):
    → Gabungkan multi-page jika ada
         ↓
 [ai_cleanup = true?] → kirim ke AI → konten bersih
+        ↓
+Set category_id  ← dari source_categories.category_id (mapping), fallback 'umum' jika null
+Set news_scope_id ← dari news_sources.default_scope_id
         ↓
 Simpan articles + article_translations (is_original=true, language=original_language)
 Update last_scraped_at

@@ -51,6 +51,11 @@ Field `is_translated` dan `available_languages` membantu frontend menampilkan in
     "name": "Olahraga",
     "slug": "olahraga"
   },
+  "scope": {
+    "id": "scp_id",
+    "name": "Berita Indonesia",
+    "slug": "indonesia"
+  },
   "author_label": "Korean Association Indonesia",
   "language": "en",
   "is_translated": true,
@@ -79,6 +84,11 @@ Field `is_translated` dan `available_languages` membantu frontend menampilkan in
     "id": "cat_sport",
     "name": "Olahraga",
     "slug": "olahraga"
+  },
+  "scope": {
+    "id": "scp_id",
+    "name": "Berita Indonesia",
+    "slug": "indonesia"
   },
   "author_label": "Korean Association Indonesia",
   "published_by_label": "Korean Association Indonesia",
@@ -129,6 +139,7 @@ Ambil daftar artikel published. Konten mengikuti `Accept-Language`.
 
 **Query Parameters**:
 - `category` (optional): Filter by category slug (mis. `olahraga`)
+- `scope` (optional): Filter by scope slug (`indonesia`, `korea`, `korea_indonesia`)
 - `author_label` (optional): Filter by label asal (mis. `KAI Jakarta`)
 - `featured` (optional): `true` untuk hanya artikel featured
 - `q` (optional): Search keyword (judul + konten)
@@ -239,6 +250,29 @@ Ambil daftar kategori news aktif (untuk filter/tab).
   "data": [
     { "id": "cat_sport", "name": "Olahraga", "slug": "olahraga", "sort_order": 1 },
     { "id": "cat_eco",   "name": "Ekonomi",  "slug": "ekonomi",  "sort_order": 2 }
+  ]
+}
+```
+
+---
+
+### 5b. GET /scopes
+
+Ambil daftar scope news aktif (untuk filter/tab asal berita: Indonesia / Korea / Korea di Indonesia).
+
+**Authentication**: Optional
+
+**Method**: GET
+
+**URL**: `/api/v1/mobile/news/scopes`
+
+**Response (200 OK)**:
+```json
+{
+  "data": [
+    { "id": "scp_id", "name": "Berita Indonesia", "slug": "indonesia", "sort_order": 1 },
+    { "id": "scp_kr", "name": "Berita Korea", "slug": "korea", "sort_order": 2 },
+    { "id": "scp_kri", "name": "Berita Korea di Indonesia", "slug": "korea_indonesia", "sort_order": 3 }
   ]
 }
 ```
@@ -565,6 +599,7 @@ Laporkan komentar. Masuk ke sistem reporting (`reportable_type = news_comment`).
 - `GET /articles` — Cache 2 menit (per bahasa)
 - `GET /articles/{id}` — Cache 5 menit (per bahasa), invalidate saat edit
 - `GET /categories` — Cache 1 jam
+- `GET /scopes` — Cache 1 jam
 - `GET /comments` — No cache (real-time)
 
 ---

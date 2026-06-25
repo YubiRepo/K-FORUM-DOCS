@@ -29,6 +29,11 @@ users
 
 news_categories
   └── articles              (category_id)
+  └── source_categories     (category_id — mapping hasil scrape → kategori KAI)
+
+news_scopes
+  └── articles              (news_scope_id)
+  └── news_sources          (default_scope_id)
 
 news_sources
   └── source_selectors      (source_id — 1:1)
@@ -123,6 +128,40 @@ ON CONFLICT DO NOTHING;
 
 
 -- ============================================================================
+-- 2b. NEWS_SCOPES
+-- Klasifikasi asal/fokus geografis berita (dimensi terpisah dari kategori topikal).
+-- Contoh: Berita Indonesia, Berita Korea, Berita Korea di Indonesia.
+-- Dikelola oleh Superadmin. Phase 1 = master kecil & manual; FK agar mudah
+-- menambah scope baru tanpa refactor (mis. 'bilateral', 'asean').
+-- ============================================================================
+
+CREATE TABLE news_scopes (
+  id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  name        VARCHAR(100) NOT NULL,        -- 'Berita Indonesia', 'Berita Korea'
+  slug        VARCHAR(120) NOT NULL UNIQUE, -- 'indonesia', 'korea', 'korea_indonesia'
+  is_active   BOOLEAN      NOT NULL DEFAULT true,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  created_by  UUID         NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  updated_by  UUID         NULL     REFERENCES users(id) ON DELETE SET NULL,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX idx_news_scopes_slug
+  ON news_scopes (slug);
+
+CREATE INDEX idx_news_scopes_active_order
+  ON news_scopes (is_active, sort_order)
+  WHERE is_active = true;
+
+-- Seed default scopes (created_by harus di-set saat insert)
+-- INSERT INTO news_scopes (name, slug, sort_order, created_by) VALUES
+--   ('Berita Indonesia',           'indonesia',       1, :usergod_id),
+--   ('Berita Korea',               'korea',           2, :usergod_id),
+--   ('Berita Korea di Indonesia',  'korea_indonesia', 3, :usergod_id);
+
+
+-- ============================================================================
 -- 3. NEWS_CATEGORIES
 -- Kategori berita (Politik, Ekonomi, Olahraga, dll).
 -- Dikelola oleh Superadmin.
@@ -160,6 +199,10 @@ CREATE TABLE news_sources (
   name              VARCHAR(100) NOT NULL,
   base_url          VARCHAR(500) NOT NULL,
   original_language VARCHAR(10)  NOT NULL REFERENCES system_languages(code) ON DELETE RESTRICT,
+
+  -- Default scope: diwariskan ke artikel hasil scraping dari source ini.
+  -- Editor masih bisa override per-artikel via articles.news_scope_id.
+  default_scope_id  UUID         NULL REFERENCES news_scopes(id) ON DELETE SET NULL,
 
   -- Scheduling (cron expression)
   schedule          VARCHAR(100) NOT NULL DEFAULT '0 */6 * * *',
@@ -224,7 +267,10 @@ CREATE UNIQUE INDEX idx_source_selectors_source
 CREATE TABLE source_categories (
   id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
   source_id     UUID         NOT NULL REFERENCES news_sources(id) ON DELETE CASCADE,
-  category_key  VARCHAR(100) NOT NULL,     -- bebas string: 'sport', 'ekonomi', 'lifestyle'
+  category_key  VARCHAR(100) NOT NULL,     -- input manual: slug/path feed dari source ('sepakbola.xml', 'tekno')
+  category_id   UUID         NULL REFERENCES news_categories(id) ON DELETE SET NULL,
+  -- Mapping: hasil scrape dari category_key ini di-assign ke kategori KAI mana.
+  -- Diisi articles.category_id saat scraping. NULL = belum dipetakan (fallback 'umum').
   url_suffix    VARCHAR(500) NULL,         -- mis. '/sport' — append ke base_url
   url_override  VARCHAR(500) NULL,         -- URL penuh override jika beda dari pola base_url
   article_limit INTEGER      NOT NULL DEFAULT 10,
@@ -253,6 +299,9 @@ CREATE TABLE articles (
   source_id             UUID         NULL REFERENCES news_sources(id) ON DELETE SET NULL,
   -- null = artikel manual
   category_id           UUID         NULL REFERENCES news_categories(id) ON DELETE SET NULL,
+  news_scope_id         UUID         NULL REFERENCES news_scopes(id) ON DELETE SET NULL,
+  -- Asal/fokus geografis (indonesia / korea / korea_indonesia).
+  -- Default diwariskan dari news_sources.default_scope_id saat scraping; editor bisa override.
   original_language     VARCHAR(10)  NOT NULL REFERENCES system_languages(code) ON DELETE RESTRICT,
   is_manual             BOOLEAN      NOT NULL DEFAULT false,
   original_url          VARCHAR(1000) NULL UNIQUE,
@@ -314,6 +363,10 @@ CREATE INDEX idx_articles_source_status
 
 CREATE INDEX idx_articles_category_published
   ON articles (category_id, status, published_at DESC)
+  WHERE status = 'published';
+
+CREATE INDEX idx_articles_scope_published
+  ON articles (news_scope_id, status, published_at DESC)
   WHERE status = 'published';
 
 CREATE INDEX idx_articles_featured
@@ -749,6 +802,26 @@ ON CONFLICT DO NOTHING;
 
 
 -- ============================================================================
+-- Migration 2b: news_scopes
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS news_scopes (
+  id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  name        VARCHAR(100) NOT NULL,
+  slug        VARCHAR(120) NOT NULL UNIQUE,
+  is_active   BOOLEAN      NOT NULL DEFAULT true,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  created_by  UUID         NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  updated_by  UUID         NULL     REFERENCES users(id) ON DELETE SET NULL,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_news_scopes_active_order
+  ON news_scopes (is_active, sort_order)
+  WHERE is_active = true;
+
+
+-- ============================================================================
 -- Migration 3: news_categories
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS news_categories (
@@ -773,6 +846,7 @@ CREATE TABLE IF NOT EXISTS news_sources (
   name              VARCHAR(100) NOT NULL,
   base_url          VARCHAR(500) NOT NULL,
   original_language VARCHAR(10)  NOT NULL REFERENCES system_languages(code) ON DELETE RESTRICT,
+  default_scope_id  UUID         NULL REFERENCES news_scopes(id) ON DELETE SET NULL,
   schedule          VARCHAR(100) NOT NULL DEFAULT '0 */6 * * *',
   last_scraped_at   TIMESTAMPTZ  NULL,
   auto_publish      BOOLEAN      NOT NULL DEFAULT false,
@@ -808,6 +882,7 @@ CREATE TABLE IF NOT EXISTS source_categories (
   id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
   source_id     UUID         NOT NULL REFERENCES news_sources(id) ON DELETE CASCADE,
   category_key  VARCHAR(100) NOT NULL,
+  category_id   UUID         NULL REFERENCES news_categories(id) ON DELETE SET NULL,
   url_suffix    VARCHAR(500) NULL,
   url_override  VARCHAR(500) NULL,
   article_limit INTEGER      NOT NULL DEFAULT 10,
@@ -826,6 +901,7 @@ CREATE TABLE IF NOT EXISTS articles (
   id                    UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
   source_id             UUID          NULL REFERENCES news_sources(id) ON DELETE SET NULL,
   category_id           UUID          NULL REFERENCES news_categories(id) ON DELETE SET NULL,
+  news_scope_id         UUID          NULL REFERENCES news_scopes(id) ON DELETE SET NULL,
   original_language     VARCHAR(10)   NOT NULL REFERENCES system_languages(code) ON DELETE RESTRICT,
   is_manual             BOOLEAN       NOT NULL DEFAULT false,
   original_url          VARCHAR(1000) NULL UNIQUE,
