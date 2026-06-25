@@ -1,0 +1,10 @@
+# Dependencies
+node_modules/
+
+# VitePress build output & cache
+.vitepress/dist/
+.vitepress/cache/
+
+# Credentials (jangan pernah commit)
+Credentials/
+*.key
