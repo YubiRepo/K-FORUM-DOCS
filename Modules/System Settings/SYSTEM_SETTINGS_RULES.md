@@ -162,9 +162,10 @@ Dibaca oleh modul Subscription dan ditampilkan di mobile saat user upgrade ke Pr
 | `payment_confirmation_deadline_hours` | number | `24` | Batas waktu upload bukti transfer setelah memulai upgrade |
 | `payment_provider` | string | `manual` | `manual` / `midtrans` / `both` — menentukan flow pembayaran yang aktif. App branch UI dari nilai ini |
 | `midtrans_environment` | string | `sandbox` | `sandbox` / `production`. Hanya dibaca backend saat `payment_provider` melibatkan midtrans |
-| `midtrans_enabled_channels` | array | `[]` | Channel yang diaktifkan, mis. `["gopay","qris","bank_transfer"]`. Di-pass backend ke Snap |
+| `midtrans_integration_mode` | string | `snap` | `snap` / `core` — menentukan mode integrasi Midtrans yang aktif. `snap` = backend balikin `snap_token` + `redirect_url` (hosted page/popup). `core` = backend balikin instruksi bayar per-channel (VA number, QRIS string, deeplink). Dibaca backend modul Subscription saat membuat transaksi |
+| `midtrans_enabled_channels` | array | `[]` | Channel yang diaktifkan, mis. `["gopay","qris","bank_transfer"]`. Pada mode `snap` di-pass ke parameter `enabled_payments` Snap; pada mode `core` membatasi channel yang boleh dipilih user |
 
-> **Midtrans — disiapkan sejak awal:** tiga key terakhir sudah di-seed dengan default inert (`manual`, `sandbox`, `[]`) — tidak ada perilaku berubah sampai integrasi dibangun. Credentials (`MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`) tetap di env — pola sama dengan `storage_provider`. Logika transaksi (Snap token, webhook handler, status mapping) milik modul Subscription, bukan modul ini. UI backoffice menyembunyikan field `midtrans_*` saat `payment_provider = manual`.
+> **Midtrans — disiapkan sejak awal:** empat key di atas sudah di-seed dengan default inert (`manual`, `sandbox`, `snap`, `[]`) — tidak ada perilaku berubah sampai integrasi dibangun. Credentials (`MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`) tetap di env — pola sama dengan `storage_provider`. Logika transaksi (Snap token, webhook handler, status mapping) milik modul Subscription, bukan modul ini. UI backoffice menyembunyikan field `midtrans_*` saat `payment_provider = manual`. `midtrans_integration_mode` hanya relevan saat `payment_provider` melibatkan midtrans.
 
 ### Group: `moderation` — Knob Global Reporting
 

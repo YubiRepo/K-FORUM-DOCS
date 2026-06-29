@@ -555,7 +555,9 @@ Dokumentasi API endpoint untuk subscription management di mobile client (Flutter
 
 ---
 
-## 11. POST /subscription/webhook/stripe
+## 11. POST /subscription/webhook/stripe — ⚠️ DEPRECATED
+
+> **DEPRECATED:** Stripe tidak lagi menjadi gateway aktif untuk KAI. Payment gateway resmi adalah **Midtrans** (lihat section 12). Endpoint ini dipertahankan hanya untuk referensi histori dan tidak diimplementasikan. Jangan dipakai untuk integrasi baru.
 
 **Description**: Stripe webhook callback (automatic, called by Stripe)
 
@@ -600,6 +602,83 @@ Dokumentasi API endpoint untuk subscription management di mobile client (Flutter
   "message": "Invalid signature"
 }
 ```
+
+---
+
+## 12. POST /subscription/webhook/midtrans
+
+**Description**: Midtrans HTTP notification (payment callback). Dipanggil otomatis oleh server Midtrans setiap kali status transaksi berubah. Berlaku untuk mode **Snap maupun Core API** — payload notification-nya sama.
+
+**Authentication**: Verifikasi `signature_key` (SHA-512 dari `order_id + status_code + gross_amount + ServerKey`). Request yang signature-nya tidak cocok harus ditolak `403`.
+
+**Method**: POST
+
+**URL**: `/api/v1/mobile/subscription/webhook/midtrans`
+
+**Request Body** (contoh — settlement sukses):
+```json
+{
+  "transaction_time": "2026-05-24 17:00:00",
+  "transaction_status": "settlement",
+  "transaction_id": "9aed5972-...",
+  "status_message": "midtrans payment notification",
+  "status_code": "200",
+  "signature_key": "abc123...",
+  "payment_type": "gopay",
+  "order_id": "req_xxx",
+  "merchant_id": "G12345",
+  "gross_amount": "80000.00",
+  "fraud_status": "accept",
+  "currency": "IDR"
+}
+```
+
+> **`order_id` = `subscription_requests.id`** (atau referensi unik yang di-generate saat create request). Backend mencari request berdasarkan field ini, bukan `transaction_id`.
+
+**Mapping `transaction_status` → status internal:**
+
+| Midtrans `transaction_status` | `fraud_status` | Aksi internal |
+|---|---|---|
+| `capture` | `accept` | request → `completed`, aktifkan subscription |
+| `settlement` | — | request → `completed`, aktifkan subscription |
+| `pending` | — | request tetap `pending` (belum bayar) |
+| `deny` | — | request → `failed` |
+| `cancel` / `expire` | — | request → `failed` |
+| `capture` | `challenge` | request tetap `pending`, tandai untuk review manual |
+| `refund` / `partial_refund` | — | trigger flow refund (lihat backoffice spec) |
+
+**Processing (dalam satu DB transaction):**
+```
+1. Verifikasi signature_key (SHA-512). Mismatch → 403, jangan proses.
+2. Cari subscription_request by order_id. Tidak ada → 404 (Midtrans akan retry).
+3. Idempotency: jika request sudah completed/failed, balikin 200 OK tanpa proses ulang.
+4. Map transaction_status → status internal (tabel di atas).
+5. Jika completed:
+   - UPDATE subscription_requests: status='completed',
+     payment_provider_transaction_id=transaction_id, approved_at=NOW()
+   - UPSERT subscriptions: plan_id baru, period start/end, status='active'
+   - Tandai subscription lama 'expired'/'superseded'
+   - INSERT subscription_history: action='upgrade', initiated_by='system'
+   - (future hook) push accounting entry: source_ref=order_id, payment_provider='midtrans'
+   - Kirim email + in-app notif: "Pembayaran berhasil, Pro aktif"
+6. Jika failed: UPDATE status='failed'. Kirim notif gagal.
+```
+
+**Response (200 OK)** — selalu balikin 200 jika sudah diproses/diabaikan dengan benar (Midtrans retry jika non-200):
+```json
+{
+  "message": "Notification processed"
+}
+```
+
+**Response (403 Forbidden — invalid signature)**:
+```json
+{
+  "message": "Invalid signature"
+}
+```
+
+> **Catatan:** Webhook ini shared antara mobile dan web — keduanya membuat `subscription_requests` yang sama dan Midtrans memanggil URL notification yang dikonfigurasi di dashboard Midtrans (satu URL). Detail pembuatan transaksi (Snap token vs Core API) ada di `API_SPEC_SUBSCRIPTION_WEB.md`.
 
 ---
 
