@@ -19,25 +19,35 @@ Dokumentasi API event module untuk aplikasi mobile — create, browse, save, sch
 
 ---
 
-## Image Upload Flow
+## Image Upload Flow (Presigned URL)
 
-Sebelum create/edit event, images harus diupload terlebih dahulu via endpoint upload. Backend returns URL yang kemudian dikirim saat create/edit event.
+Sebelum create/edit event, images harus diupload terlebih dahulu via **presigned URL flow**. Client mendapat presigned URL + `s3:` key, upload langsung ke S3, lalu konfirmasi. `s3:` key inilah yang dikirim saat create/edit event.
 
 ```
-┌────────────────────────────────────────────────────────┐
-│ IMAGE UPLOAD FLOW                                      │
-├────────────────────────────────────────────────────────┤
-│                                                        │
-│  Step 1: Upload image(s)                               │
-│  POST /api/v1/mobile/media/upload                      │
-│  → Returns: { urls: ["https://cdn.../img1.jpg", ...] } │
-│                                                        │
-│  Step 2: Create/Edit event dengan image URLs           │
-│  POST /api/v1/mobile/events                            │
-│  { "images": ["https://cdn.../img1.jpg", ...] }        │
-│                                                        │
-└────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│ IMAGE UPLOAD FLOW (Presigned URL)                                │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Step 1: Request presigned URL + s3 key                          │
+│  POST /api/v1/mobile/media/presign                               │
+│  → Returns: { url: "https://s3....", key: "s3:/events/..." }    │
+│                                                                  │
+│  Step 2: Upload file langsung ke S3 via presigned URL            │
+│  PUT <presigned_url>                                             │
+│  (Body: file binary, Content-Type: image/jpeg)                   │
+│                                                                  │
+│  Step 3: Confirm upload selesai                                  │
+│  POST /api/v1/mobile/media/confirm                               │
+│  → Returns: { status: "confirmed", key: "s3:/events/..." }      │
+│                                                                  │
+│  Step 4: Create/Edit event dengan s3 key                         │
+│  POST /api/v1/mobile/events                                      │
+│  { "images": ["s3:/events/img1.jpg", ...] }                      │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
 ```
+
+Untuk menghapus media yang sudah diupload (sebelum dipakai), gunakan endpoint **Delete Media**.
 
 ---
 
@@ -120,31 +130,37 @@ Sebelum create/edit event, images harus diupload terlebih dahulu via endpoint up
 
 ## Endpoints
 
-### 1. Upload Image(s)
+### 1a. Request Presigned URL
 
-Upload satu atau lebih gambar untuk event. Harus dilakukan **sebelum** create/edit event. Returns URL yang siap dipakai.
+Mendapatkan presigned URL dan `s3:` key untuk upload file langsung ke S3. Satu request = satu file. Untuk multiple files, lakukan berulang.
 
-- **URL**: `POST /api/v1/mobile/media/upload`
+- **URL**: `POST /api/v1/mobile/media/presign`
 - **Autentikasi**: Yes (Member Pro)
-- **Content-Type**: `multipart/form-data`
+- **Content-Type**: `application/json`
 
 - **Request**:
+  ```json
+  {
+    "filename": "img1.jpg",
+    "mime_type": "image/jpeg",
+    "context": "event"
+  }
   ```
-  files[]: image1.jpg  (max 5 files, max 5MB per file)
-  files[]: image2.jpg
-  context: "event"     (form field, untuk organizing di storage)
-  ```
+
+- **Validation**:
+  - `filename`: Required, max 200 chars, must have image extension (jpg, png, webp)
+  - `mime_type`: Required, must match extension
+  - `context`: Required, enum: `event`, `subscription_proof`, `avatar`, `news`
 
 - **Response (Success 201)**:
   ```json
   {
     "data": {
-      "urls": [
-        "https://cdn.example.com/events/uploads/img_uuid1.jpg",
-        "https://cdn.example.com/events/uploads/img_uuid2.jpg"
-      ]
+      "url": "https://s3.ap-southeast-1.amazonaws.com/kai-uploads/events/abc123?X-Amz-Algorithm=...",
+      "key": "s3:/events/uploads/img_uuid1.jpg",
+      "expires_in": 3600
     },
-    "message": "2 image(s) uploaded successfully"
+    "message": "Presigned URL generated"
   }
   ```
 
@@ -153,10 +169,77 @@ Upload satu atau lebih gambar untuk event. Harus dilakukan **sebelum** create/ed
   {
     "message": "Validation failed",
     "errors": {
-      "files": ["Maximum 5 files per upload"],
-      "files.0": ["File size exceeds 5MB limit"],
-      "files.1": ["Only image files are allowed (jpg, png, webp)"]
+      "filename": ["Invalid file extension. Allowed: jpg, png, webp"]
     }
+  }
+  ```
+
+---
+
+### 1b. Confirm Upload
+
+Konfirmasi bahwa file sudah berhasil diupload ke S3. Backend akan memverifikasi keberadaan file dan mencatatnya di database.
+
+- **URL**: `POST /api/v1/mobile/media/confirm`
+- **Autentikasi**: Yes (Member Pro)
+- **Content-Type**: `application/json`
+
+- **Request**:
+  ```json
+  {
+    "key": "s3:/events/uploads/img_uuid1.jpg"
+  }
+  ```
+
+- **Validation**:
+  - `key`: Required, must start with `s3:`
+
+- **Response (Success 200)**:
+  ```json
+  {
+    "data": {
+      "key": "s3:/events/uploads/img_uuid1.jpg",
+      "status": "confirmed"
+    },
+    "message": "Upload confirmed"
+  }
+  ```
+
+- **Response (Error — 404)**:
+  ```json
+  {
+    "message": "File not found on storage. Upload may have failed."
+  }
+  ```
+
+---
+
+### 1c. Delete Media
+
+Menghapus media yang sudah diupload (sebelum digunakan di create/edit). Media yang sudah terpakai di event tidak bisa dihapus — hapus dari event dulu.
+
+- **URL**: `DELETE /api/v1/mobile/media`
+- **Autentikasi**: Yes (Member Pro)
+- **Content-Type**: `application/json`
+
+- **Request**:
+  ```json
+  {
+    "key": "s3:/events/uploads/img_uuid1.jpg"
+  }
+  ```
+
+- **Response (Success 200)**:
+  ```json
+  {
+    "message": "Media deleted successfully"
+  }
+  ```
+
+- **Response (Error — 409)**:
+  ```json
+  {
+    "message": "Media is in use by an existing event. Remove it from the event first."
   }
   ```
 
@@ -164,7 +247,7 @@ Upload satu atau lebih gambar untuk event. Harus dilakukan **sebelum** create/ed
 
 ### 2. Create Event
 
-Buat event baru. Images dikirim sebagai array URL hasil dari endpoint upload.
+Buat event baru. Images dikirim sebagai array `s3:` key hasil dari presigned URL flow.
 
 - **URL**: `POST /api/v1/mobile/events`
 - **Autentikasi**: Yes (Member Pro only)
@@ -176,8 +259,8 @@ Buat event baru. Images dikirim sebagai array URL hasil dari endpoint upload.
     "title": "Futsal Tournament 2026",
     "description": "Turnamen futsal tahunan terbesar di Jakarta...",
     "images": [
-      "https://cdn.example.com/events/uploads/img_uuid1.jpg",
-      "https://cdn.example.com/events/uploads/img_uuid2.jpg"
+      "s3:/events/uploads/img_uuid1.jpg",
+      "s3:/events/uploads/img_uuid2.jpg"
     ],
     "category_id": "uuid_sports",
     "event_type": "offline",
@@ -186,7 +269,7 @@ Buat event baru. Images dikirim sebagai array URL hasil dari endpoint upload.
     "event_date": "2026-06-15",
     "event_end_date": null,
     "event_time": "14:00",
-    "registration_url": "https://eventbrite.com/e/futsal-2026"
+    "registration_url": "ext:https://eventbrite.com/e/futsal-2026"
   }
   ```
 
@@ -199,11 +282,11 @@ Buat event baru. Images dikirim sebagai array URL hasil dari endpoint upload.
     "category_id": "uuid_business",
     "event_type": "online",
     "online_platform": "Zoom",
-    "online_url": "https://zoom.us/j/123456789",
+    "online_url": "ext:https://zoom.us/j/123456789",
     "event_date": "2026-06-20",
     "event_end_date": null,
     "event_time": "10:00",
-    "registration_url": "https://eventbrite.com/e/webinar-pm"
+    "registration_url": "ext:https://eventbrite.com/e/webinar-pm"
   }
   ```
 
@@ -212,13 +295,13 @@ Buat event baru. Images dikirim sebagai array URL hasil dari endpoint upload.
   {
     "title": "KAI Annual Summit 2026",
     "description": "...",
-    "images": ["https://cdn.example.com/events/uploads/img_uuid1.jpg"],
+    "images": ["s3:/events/uploads/img_uuid1.jpg"],
     "category_id": "uuid_community",
     "event_type": "hybrid",
     "venue_name": "Jakarta Convention Center",
     "venue_address": "Jl. Gatot Subroto, Jakarta",
     "online_platform": "YouTube Live",
-    "online_url": "https://youtube.com/live/abc123",
+    "online_url": "ext:https://youtube.com/live/abc123",
     "event_date": "2026-07-10",
     "event_end_date": "2026-07-11",
     "event_time": "09:00",
@@ -229,7 +312,7 @@ Buat event baru. Images dikirim sebagai array URL hasil dari endpoint upload.
 - **Request Validation**:
   - `title`: Required, string, max 200 chars
   - `description`: Required, string
-  - `images`: Optional, array of URLs, max 10 items. First item auto-set sebagai cover image
+  - `images`: Optional, array of `s3:` keys, max 10 items. First item auto-set sebagai cover image
   - `category_id`: Required, must exist
   - `event_type`: Required, enum: `offline`, `online`, `hybrid`
   - `venue_name`: Required jika `event_type` adalah `offline` atau `hybrid`
@@ -486,7 +569,7 @@ Ambil detail lengkap satu event.
 
 ### 7. Edit Own Event
 
-Edit event milik sendiri. Hanya bisa edit event berstatus `draft` atau `rejected`.
+Edit event milik sendiri. Images menggunakan `s3:` key hasil dari presigned URL flow. Hanya bisa edit event berstatus `draft` atau `rejected`.
 
 - **URL**: `PUT /api/v1/mobile/events/{event_id}`
 - **Autentikasi**: Yes (Member Pro, owner only)
@@ -497,7 +580,7 @@ Edit event milik sendiri. Hanya bisa edit event berstatus `draft` atau `rejected
     "title": "Futsal Tournament 2026 — Updated",
     "description": "...",
     "images": [
-      "https://cdn.example.com/events/uploads/img_new1.jpg"
+      "s3:/events/uploads/img_new1.jpg"
     ],
     "event_type": "offline",
     "venue_name": "GOR Sumantri Brojonegoro",
@@ -879,11 +962,11 @@ Ambil daftar kategori event untuk dropdown saat create event.
 ```
 1. User buka "Create Event"
 
-2. User upload 3 gambar:
-   POST /api/v1/mobile/media/upload
-   → Response: {
-       "urls": ["https://cdn.../img1.jpg", "https://cdn.../img2.jpg", "https://cdn.../img3.jpg"]
-     }
+2. User upload 3 gambar via presigned URL flow (ulangi per file):
+   POST /api/v1/mobile/media/presign  →  dapat presigned URL + s3:key
+   PUT <presigned_url>                →  upload langsung ke S3
+   POST /api/v1/mobile/media/confirm  →  konfirmasi
+   → Hasil: 3 s3 key siap pakai
 
 3. User isi form:
    ┌─────────────────────────────────────────────────────┐
@@ -952,7 +1035,9 @@ Ambil daftar kategori event untuk dropdown saat create event.
 ## Important Notes
 
 ### ✅ DO:
-- ✅ Upload images terpisah dulu sebelum create/edit event
+- ✅ Gunakan presigned URL flow sebelum create/edit event (presign → upload → confirm)
+- ✅ Kirim `s3:` key pada field `images` di create/edit request
+- ✅ Gunakan `ext:https://...` untuk URL eksternal (registration_url, online_url)
 - ✅ Image pertama dalam array auto-set sebagai cover image
 - ✅ Event scope global — tidak ada `region_id`
 - ✅ Gunakan `event_type` untuk bedakan offline/online/hybrid
@@ -962,6 +1047,7 @@ Ambil daftar kategori event untuk dropdown saat create event.
 
 ### ❌ DON'T:
 - ❌ Jangan kirim base64 atau file langsung saat create/edit event
+- ❌ Jangan kirim full CDN URL saat create/edit — gunakan `s3:` key
 - ❌ Jangan include `region_id` dalam request body event
 - ❌ Member standard tidak bisa create event
 - ❌ Jangan edit event yang sedang `pending_approval` atau sudah `published`
@@ -1017,8 +1103,10 @@ Standard error responses:
 | Scenario | HTTP | Reason |
 |----------|------|--------|
 | Member standard create event | 403 | Pro plan required |
-| Upload > 5 files sekaligus | 422 | Upload limit per request |
-| Image > 5MB | 422 | File size exceeded |
+| Presign dengan file extension tidak valid | 422 | Validation failed |
+| Image > 5MB di S3 (presign content-length) | 422 | File size exceeded |
+| Confirm dengan key tidak ditemukan di S3 | 404 | Upload may have failed |
+| Hapus media yang sedang dipakai event | 409 | Media in use |
 | Event date di masa lalu | 422 | Validation failed |
 | venue_name kosong untuk offline event | 422 | Validation failed |
 | online_url kosong untuk online event | 422 | Validation failed |
@@ -1028,4 +1116,4 @@ Standard error responses:
 
 ---
 
-*API spec event module untuk mobile. Upload images terpisah sebelum create/edit event.*
+*API spec event module untuk mobile. Gunakan presigned URL flow (presign → upload → confirm) sebelum create/edit event.*

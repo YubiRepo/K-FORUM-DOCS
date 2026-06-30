@@ -17,6 +17,17 @@ Dokumentasi API event module untuk backoffice dashboard — manage, review, appr
 
 ---
 
+## Daftar Endpoint — Media Upload
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| POST | `/api/v1/web/media/upload` | Upload image(s) — multipart |
+| POST | `/api/v1/web/media/presign` | Generate presigned upload URL |
+| POST | `/api/v1/web/media/confirm` | Confirm upload and mark permanent |
+| DELETE | `/api/v1/web/media/{file_id}` | Delete uploaded file |
+
+---
+
 ## Image Upload Flow
 
 Saat superadmin create atau edit event langsung dari backoffice, images tetap diupload via endpoint upload terlebih dahulu sebelum dikirim sebagai URL.
@@ -32,7 +43,7 @@ Saat superadmin create atau edit event langsung dari backoffice, images tetap di
 │                                                        │
 │  Step 2: Create/Edit event dengan image URLs           │
 │  POST /api/v1/web/events                               │
-│  { "images": ["https://cdn.../img1.jpg", ...] }        │
+│  { "images": ["s3:/events/uploads/img1.jpg", ...] }    │
 │                                                        │
 └────────────────────────────────────────────────────────┘
 ```
@@ -464,8 +475,8 @@ Superadmin buat event langsung dari backoffice. Langsung published tanpa approva
     "title": "Official Platform Event 2026",
     "description": "Event resmi dari platform...",
     "images": [
-      "https://cdn.example.com/events/uploads/img_uuid1.jpg",
-      "https://cdn.example.com/events/uploads/img_uuid2.jpg"
+      "s3:/events/uploads/img_uuid1.jpg",
+      "s3:/events/uploads/img_uuid2.jpg"
     ],
     "category_id": "uuid_community",
     "event_type": "hybrid",
@@ -528,7 +539,7 @@ Superadmin edit event apapun statusnya.
   {
     "title": "Updated title",
     "images": [
-      "https://cdn.example.com/events/uploads/img_new1.jpg"
+      "s3:/events/uploads/img_new1.jpg"
     ],
     "event_type": "offline",
     "venue_name": "Gedung Serbaguna Senayan",

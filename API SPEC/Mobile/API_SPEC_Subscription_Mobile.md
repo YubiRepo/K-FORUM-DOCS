@@ -166,20 +166,22 @@ Dokumentasi API endpoint untuk subscription management di mobile client (Flutter
 
 **URL**: `/api/v1/mobile/subscription/request`
 
+> **Manual proof upload**: Gunakan presigned media endpoint (`POST /api/v1/mobile/media/presign` → upload → `POST /api/v1/mobile/media/confirm`) terlebih dahulu untuk upload bukti transfer. Hasilnya berupa `s3:` key yang dikirim sebagai `manual_proof_key`.
+
 **Request Body**:
 ```json
 {
   "requested_plan": "pro",
   "payment_method": "manual" | "stripe" | "midtrans",
-  "manual_proof_url": "https://..." | null,
-  "manual_proof_type": "image" | "video" | null
+  "manual_proof_key": "s3:/proofs/manual_upload_abc.jpg" | null
 }
 ```
 
 **Validation**:
 - `requested_plan`: required, harus ada di plans
 - `payment_method`: required, harus valid
-- Jika `payment_method` === 'manual': `manual_proof_url` boleh null tapi recommended
+- Jika `payment_method` === 'manual': `manual_proof_key` boleh null tapi recommended (format `s3:`)
+- Jika `manual_proof_key` diisi, harus dimulai dengan `s3:`
 - User tidak boleh punya pending request
 
 **Response (201 Created)**:

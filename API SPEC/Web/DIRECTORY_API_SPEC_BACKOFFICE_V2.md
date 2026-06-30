@@ -116,6 +116,10 @@ Dokumentasi lengkap API endpoint Directory module untuk backoffice admin dashboa
 | 32 | GET | `/analytics/overview` | SA / AR |
 | 33 | GET | `/analytics/merchants` | SA / AR |
 | 34 | GET | `/analytics/reviews` | SA / AR |
+| **MEDIA / IMAGES** | | | |
+| 35 | POST | `/images/presign` | SA / AR |
+| 36 | POST | `/images/confirm` | SA / AR |
+| 37 | DELETE | `/images/{image_id}` | SA / AR |
 
 ---
 

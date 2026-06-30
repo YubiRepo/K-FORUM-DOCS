@@ -26,6 +26,9 @@
    - [13. Upvote Answer](#13-upvote-answer)
    - [14. Mark Answer Accepted (Expert/Admin)](#14-mark-answer-accepted-expertadmin)
    - [15. Get Questions Assigned To Me](#15-get-questions-assigned-to-me)
+   - [16. Presign Attachment Upload](#16-presign-attachment-upload)
+   - [17. Confirm Attachment Upload](#17-confirm-attachment-upload)
+   - [18. Delete Attachment](#18-delete-attachment)
 4. [Status Code Reference](#status-code-reference)
 5. [Notes & Best Practices](#notes--best-practices)
 
@@ -446,7 +449,7 @@ Member mengajukan pertanyaan baru. Pertanyaan masuk ke antrian moderasi superadm
   "question_text": "Apakah WNA bisa memiliki properti di Indonesia dengan status KITAS?",
   "visibility": "public",
   "attachment_urls": [
-    "https://cdn.example.com/uploads/doc_uuid.jpg"
+    "s3:/uploads/qna/questions/doc_uuid.jpg"
   ]
 }
 ```
@@ -709,7 +712,9 @@ Menulis jawaban pada pertanyaan publik. Satu user maksimal satu jawaban per pert
 ```json
 {
   "answer_text": "Tiga rekomendasi co-working space: ...",
-  "attachment_urls": []
+  "attachment_urls": [
+    "s3:/uploads/qna/answers/file.pdf"
+  ]
 }
 ```
 
@@ -776,7 +781,9 @@ Mengubah jawaban sendiri. Jika mode `manual`, jawaban yang sudah `visible` bisa 
 ```json
 {
   "answer_text": "Update: tambahan rekomendasi ...",
-  "attachment_urls": []
+  "attachment_urls": [
+    "s3:/uploads/qna/answers/file.pdf"
+  ]
 }
 ```
 
@@ -894,6 +901,72 @@ Daftar pertanyaan (publik & privat) yang ditugaskan ke user yang sedang login se
 
 ---
 
+### 16. Presign Attachment Upload
+
+Minta presigned URL untuk upload file lampiran (gambar/dokumen). Client upload langsung ke S3, lalu confirm.
+
+- **URL:** `POST /api/v1/mobile/qna/attachments/presign`
+- **Auth:** Required (member)
+- **Request Body:**
+```json
+{
+  "filename": "screenshot.jpg"
+}
+```
+
+| Field      | Type   | Required | Keterangan                    |
+|------------|--------|----------|-------------------------------|
+| `filename` | string | **Yes**  | Nama file dengan ekstensi     |
+
+- **Response 200:**
+```json
+{
+  "data": {
+    "upload_url": "https://s3.ap-northeast-2.amazonaws.com/kforum-uploads/...",
+    "file_key": "s3:/uploads/qna/attachments/abc123.jpg",
+    "expires_in": 900
+  }
+}
+```
+
+### 17. Confirm Attachment Upload
+
+Konfirmasi upload selesai. Server memproses file.
+
+- **URL:** `POST /api/v1/mobile/qna/attachments/confirm`
+- **Auth:** Required (member)
+- **Request Body:**
+```json
+{
+  "file_key": "s3:/uploads/qna/attachments/abc123.jpg"
+}
+```
+
+- **Response 200:**
+```json
+{
+  "data": {
+    "url": "https://cdn.k-forum.id/uploads/qna/attachments/abc123.jpg"
+  }
+}
+```
+
+### 18. Delete Attachment
+
+Hapus lampiran yang sudah di-upload (jika batal dipakai).
+
+- **URL:** `DELETE /api/v1/mobile/qna/attachments`
+- **Auth:** Required (member) — hanya pemilik
+- **Request Body:**
+```json
+{
+  "file_key": "s3:/uploads/qna/attachments/abc123.jpg"
+}
+```
+- **Response 200:** `{ "message": "Lampiran berhasil dihapus" }`
+- **Response 404:** `{ "message": "Lampiran tidak ditemukan" }`
+
+---
 
 | Code | Meaning |
 |------|---------|
@@ -929,7 +1002,7 @@ Daftar pertanyaan (publik & privat) yang ditugaskan ke user yang sedang login se
 
 6. **Notifikasi Q&A:** Member menerima push notification saat pertanyaan dijawab (`question_answered`) atau ditolak (`question_rejected`). Deep link notifikasi ke `GET /questions/my/{question_id}`.
 
-7. **Attachment Upload:** Upload lampiran terlebih dahulu ke media upload endpoint sebelum submit pertanyaan. Kirim URL hasil upload ke `attachment_urls`.
+7. **Attachment Upload via Presign:** Panggil presign (#16), upload langsung ke S3, confirm (#17), lalu kirim `s3:` key di `attachment_urls`. Jangan kirim base64.
 
 8. **Polling Riwayat:** Untuk status `pending`, client bisa refresh `GET /questions/my` setelah menerima push notification, atau tampilkan badge unread pada tab riwayat.
 

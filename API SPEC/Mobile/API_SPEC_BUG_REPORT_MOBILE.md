@@ -10,7 +10,9 @@ Endpoint mobile untuk **pelaporan bug/masalah teknis**. Member mengirim laporan;
 2. [Data Models](#data-models)
 3. [Endpoints](#endpoints)
    - [1. Submit Bug Report](#1-submit-bug-report)
-   - [2. Upload Attachment](#2-upload-attachment)
+   - [2. Presign Attachment Upload](#2-presign-attachment-upload)
+   - [2b. Confirm Attachment Upload](#2b-confirm-attachment-upload)
+   - [2c. Delete Attachment](#2c-delete-attachment)
    - [3. Get My Bug Reports](#3-get-my-bug-reports)
    - [4. Get My Bug Report Detail](#4-get-my-bug-report-detail)
 4. [Status Code Reference](#status-code-reference)
@@ -121,7 +123,7 @@ Kirim laporan bug. Field `context` di-capture otomatis oleh client.
   "steps_to_reproduce": "1. Login\n2. Buka tab Komunitas\n3. Crash",
   "category": "crash",
   "severity": "high",
-  "attachments": ["https://cdn/.../shot1.jpg"],
+  "attachments": ["s3:/uploads/bug-reports/shot1.jpg"],
   "context": {
     "app_version": "2.3.1",
     "platform": "android",
@@ -139,7 +141,7 @@ Kirim laporan bug. Field `context` di-capture otomatis oleh client.
 | `steps_to_reproduce` | string | No | Langkah memunculkan bug |
 | `category` | string (enum) | **Yes** | `crash`/`ui`/`performance`/`data`/`auth`/`other` |
 | `severity` | string (enum) | **Yes** | `low`/`medium`/`high`/`critical` |
-| `attachments` | array(string) | No | URL hasil upload (maks 5) |
+| `attachments` | array(string) | No | File key `s3:` hasil upload (maks 5) |
 | `context` | object | No (disarankan) | Auto-captured: app_version, platform, os_version, device_model, screen |
 
 - **Side effects:** insert bug report (`status=new`).
@@ -152,16 +154,70 @@ Kirim laporan bug. Field `context` di-capture otomatis oleh client.
 
 ---
 
-### 2. Upload Attachment
+### 2. Presign Attachment Upload
 
-Upload screenshot sebelum submit. Kumpulkan URL lalu kirim di field `attachments`.
+Minta presigned URL untuk upload screenshot. Client upload langsung ke S3, lalu confirm.
 
-- **URL:** `POST /api/v1/mobile/reports/bug/attachments`
+- **URL:** `POST /api/v1/mobile/reports/bug/attachments/presign`
 - **Auth:** Required (member)
-- **Content-Type:** `multipart/form-data`
-- **Form Field:** `file` (image; jpg/png/webp, maks 5MB)
-- **Response 201:** `{ "data": { "url": "https://cdn/.../shot1.jpg" } }`
-- **Response 422:** `{ "message": "Format / ukuran file tidak valid" }`
+- **Request Body:**
+```json
+{
+  "filename": "screenshot.jpg"
+}
+```
+
+| Field      | Type   | Required | Keterangan                |
+|------------|--------|----------|---------------------------|
+| `filename` | string | **Yes**  | Nama file dengan ekstensi |
+
+- **Response 200:**
+```json
+{
+  "data": {
+    "upload_url": "https://s3.ap-northeast-2.amazonaws.com/kforum-uploads/...",
+    "file_key": "s3:/uploads/bug-reports/abc123.jpg",
+    "expires_in": 900
+  }
+}
+```
+
+### 2b. Confirm Attachment Upload
+
+Konfirmasi upload selesai.
+
+- **URL:** `POST /api/v1/mobile/reports/bug/attachments/confirm`
+- **Auth:** Required (member)
+- **Request Body:**
+```json
+{
+  "file_key": "s3:/uploads/bug-reports/abc123.jpg"
+}
+```
+
+- **Response 200:**
+```json
+{
+  "data": {
+    "url": "https://cdn.k-forum.id/uploads/bug-reports/abc123.jpg"
+  }
+}
+```
+
+### 2c. Delete Attachment
+
+Hapus lampiran yang sudah di-upload (jika batal dipakai).
+
+- **URL:** `DELETE /api/v1/mobile/reports/bug/attachments`
+- **Auth:** Required (member)
+- **Request Body:**
+```json
+{
+  "file_key": "s3:/uploads/bug-reports/abc123.jpg"
+}
+```
+- **Response 200:** `{ "message": "Lampiran berhasil dihapus" }`
+- **Response 404:** `{ "message": "Lampiran tidak ditemukan" }`
 
 ---
 
@@ -202,7 +258,7 @@ Upload screenshot sebelum submit. Kumpulkan URL lalu kirim di field `attachments
 ## Notes & Best Practices
 
 1. **Capture konteks otomatis.** Client sebaiknya mengisi `context` (versi app, OS, device, screen) tanpa membebani user mengetik — ini sangat membantu triage.
-2. **Upload attachment dulu.** Sama seperti media di modul lain: upload tiap gambar via #2, baru sertakan URL di submit. Jangan kirim base64.
+2. **Upload attachment via presign.** Panggil presign (#2), upload langsung ke S3, confirm (#2b), lalu kirim `s3:` key di `attachments`. Jangan kirim base64.
 3. **Field internal disembunyikan.** `priority`, `assigned_to`, `external_issue_id/url` tidak pernah dikembalikan ke mobile.
 4. **Transparansi terbatas.** Pelapor melihat `status` & `admin_note`, cukup untuk tahu progres tanpa membuka detail internal tim.
 
@@ -212,7 +268,7 @@ Upload screenshot sebelum submit. Kumpulkan URL lalu kirim di field `attachments
 
 ```
 Temui bug → menu "Laporkan Masalah"
-  → (opsional) Upload screenshot (2)
+  → (opsional) Presign screenshot (2) → Upload ke S3 → Confirm (2b)
   → Isi judul/deskripsi/kategori/severity, context auto-terisi
   → Submit (1) → 201
 Pantau: My Bug Reports (3) → Detail (4) → status new → triaged → in_progress → resolved

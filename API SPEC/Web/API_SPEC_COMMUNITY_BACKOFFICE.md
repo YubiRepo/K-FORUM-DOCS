@@ -74,6 +74,16 @@ Berdasarkan `COMMUNITY_RULES.md` dan `COMMUNITY_DB_SCHEMA.md`. Endpoint mobile (
 
 ---
 
+## Daftar Endpoint
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| POST | `/api/v1/web/media/image/presign` | Mendapatkan presigned URL untuk upload avatar/media post |
+| POST | `/api/v1/web/media/image/confirm` | Konfirmasi upload gambar selesai |
+| DELETE | `/api/v1/web/media/image` | Menghapus gambar avatar/media post |
+
+---
+
 ## Data Models
 
 ### CategoryObject

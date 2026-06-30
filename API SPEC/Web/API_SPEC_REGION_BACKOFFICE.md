@@ -68,6 +68,16 @@ Semua endpoint require **superadmin** atau **admin region** (role check). Member
 
 ---
 
+## Daftar Endpoint
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| POST | `/api/v1/web/media/image/presign` | Mendapatkan presigned URL untuk upload gambar region |
+| POST | `/api/v1/web/media/image/confirm` | Konfirmasi upload gambar selesai |
+| DELETE | `/api/v1/web/media/image` | Menghapus gambar region |
+
+---
+
 ## Model Data
 
 ### Region Object
@@ -133,7 +143,7 @@ Semua endpoint require **superadmin** atau **admin region** (role check). Member
     "name": "KAI Bandung",
     "slug": "bandung",
     "description": "Wilayah Bandung dan sekitarnya",
-    "image_url": "https://cdn.example.com/regions/bandung.jpg"
+    "image_url": "s3:/regions/images/bandung.jpg"
   }
   ```
 
@@ -170,7 +180,7 @@ Semua endpoint require **superadmin** atau **admin region** (role check). Member
 
 - **Request Body:**
   ```json
-  { "name": "KAI Bandung Raya", "slug": "bandung-raya", "description": "...", "image_url": "https://..." }
+  { "name": "KAI Bandung Raya", "slug": "bandung-raya", "description": "...", "image_url": "s3:/regions/images/bandung_raya.jpg" }
   ```
 
 - **Response (200 OK):**

@@ -23,6 +23,16 @@ Dokumentasi API News untuk dashboard backoffice — manajemen artikel, sumber sc
 
 ---
 
+## Daftar Endpoint — Media Thumbnail Upload
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| POST | `/api/v1/web/media/news/presign` | Generate presigned URL for thumbnail upload |
+| POST | `/api/v1/web/media/news/confirm` | Confirm thumbnail upload |
+| DELETE | `/api/v1/web/media/news/{file_id}` | Delete uploaded thumbnail |
+
+---
+
 ## Bagian A — Article Management
 
 ### 1. GET /articles
@@ -154,7 +164,7 @@ Buat artikel manual. Editor pilih bahasa utama + tulis konten.
     "content": "<p>Isi berita...</p>",
     "summary": "Ringkasan singkat",
     "author": "Nama Penulis",
-    "thumbnail_url": "https://cdn.kai.app/news/thumb.jpg",
+    "thumbnail_url": "s3:/news/thumbnails/thumb.jpg",
     "tags": ["tag1", "tag2"]
   }
 }

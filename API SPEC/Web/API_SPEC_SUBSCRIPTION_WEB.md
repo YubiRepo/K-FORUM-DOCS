@@ -4,7 +4,7 @@ Dokumentasi API endpoint untuk subscription management di **web client** (Nuxt m
 
 > **Hubungan dengan spec lain:**
 > - `API_SPEC_Subscription_Mobile.md` — endpoint setara untuk Flutter (prefix `/mobile`). Logika bisnis & response shape identik; yang beda hanya prefix dan detail return URL pembayaran.
-> - Webhook Midtrans **shared** dengan mobile (satu URL notification dikonfigurasi di dashboard Midtrans). Lihat section 12.
+> - Webhook Midtrans **shared** dengan mobile (satu URL notification dikonfigurasi di dashboard Midtrans). Lihat section 15.
 > - `API_SPEC_PLAN_SUBSCRIPTION.md` — endpoint backoffice (admin verify request, refund, plan management).
 > - Mode integrasi (`snap`/`core`), environment (`sandbox`/`production`), dan channel aktif dikontrol dari **System Settings** group `payment` — bukan hardcode (lihat `SYSTEM_SETTINGS_RULES.md`).
 
@@ -97,7 +97,7 @@ Member memilih `payment_method` saat create request. Untuk `midtrans`, **bentuk 
 {
   "requested_plan": "pro",
   "payment_method": "manual" | "midtrans",
-  "manual_proof_url": "https://..." | null,
+  "manual_proof_url": "s3:/subscriptions/proof/uuid.pdf" | null,
   "manual_proof_type": "image" | "video" | null
 }
 ```
@@ -105,7 +105,7 @@ Member memilih `payment_method` saat create request. Untuk `midtrans`, **bentuk 
 **Validation**:
 - `requested_plan`: required, harus ada di plans dan `status = active`
 - `payment_method`: required; nilai valid mengikuti `payment_provider` di System Settings (`manual` saja, `midtrans` saja, atau keduanya bila `both`)
-- Jika `payment_method = manual`: `manual_proof_url` boleh null tapi recommended
+- Jika `payment_method = manual`: `manual_proof_url` boleh null tapi recommended. Gunakan `s3:/path` untuk file terupload atau `ext:https://...` untuk URL eksternal.
 - User tidak boleh punya pending/processing request lain
 - Channel yang dikirim ke Midtrans dibatasi oleh `midtrans_enabled_channels`
 
@@ -416,7 +416,91 @@ Contoh channel lain pada mode `core`:
 
 ---
 
-## 12. POST /subscription/webhook/midtrans
+## 12. POST /subscription/proof/presign
+
+**Description**: Dapatkan presigned URL untuk upload bukti pembayaran manual.
+
+**Authentication**: Required (Bearer token)
+
+**Method**: POST
+
+**URL**: `/api/v1/web/subscription/proof/presign`
+
+**Request Body**:
+```json
+{
+  "filename": "proof-payment.pdf",
+  "content_type": "application/pdf"
+}
+```
+
+**Response (200 OK)**:
+```json
+{
+  "data": {
+    "upload_url": "https://s3.ap-southeast-1.amazonaws.com/...",
+    "object_key": "subscriptions/proof/uuid.pdf",
+    "expires_in": 3600
+  }
+}
+```
+
+---
+
+## 13. POST /subscription/proof/confirm
+
+**Description**: Konfirmasi upload bukti pembayaran manual selesai.
+
+**Authentication**: Required (Bearer token)
+
+**Method**: POST
+
+**URL**: `/api/v1/web/subscription/proof/confirm`
+
+**Request Body**:
+```json
+{
+  "object_key": "subscriptions/proof/uuid.pdf"
+}
+```
+
+**Response (200 OK)**:
+```json
+{
+  "data": {
+    "proof_url": "s3:/subscriptions/proof/uuid.pdf",
+    "status": "confirmed"
+  }
+}
+```
+
+---
+
+## 14. DELETE /subscription/proof/{proof_id}
+
+**Description**: Hapus bukti pembayaran yang sudah diupload.
+
+**Authentication**: Required (Bearer token)
+
+**Method**: DELETE
+
+**URL**: `/api/v1/web/subscription/proof/{proof_id}`
+
+**Query Params**:
+| Param | Type | Required | Keterangan |
+|-------|------|----------|-----------|
+| `object_key` | string | **Yes** | Key file yang akan dihapus (dari presign response) |
+
+**Response (200 OK)**:
+```json
+{
+  "message": "Proof file deleted successfully"
+}
+```
+
+---
+
+## 15. POST /subscription/webhook/midtrans
 
 **Description**: Midtrans HTTP notification (payment callback). **Shared dengan mobile** — Midtrans hanya memanggil satu URL notification yang dikonfigurasi di dashboard. Detail mapping status, signature, dan processing **sama persis** dengan `API_SPEC_Subscription_Mobile.md` section 12.
 

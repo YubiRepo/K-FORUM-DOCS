@@ -18,6 +18,16 @@ Dokumentasi API untuk admin manage announcements di dashboard backoffice.
 
 ---
 
+## Daftar Endpoint
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| POST | `/api/v1/web/media/image/presign` | Mendapatkan presigned URL untuk upload gambar announcement |
+| POST | `/api/v1/web/media/image/confirm` | Konfirmasi upload gambar selesai |
+| DELETE | `/api/v1/web/media/image` | Menghapus gambar announcement |
+
+---
+
 ## 1. POST /announcements
 
 Create announcement baru.
@@ -33,7 +43,7 @@ Create announcement baru.
 {
   "title": "Gempa Bumi 7.2 SR",
   "body": "Gempa bumi magnitude 7.2 terjadi di Jawa Barat. Epicenter dekat Bandung...",
-  "image_url": "https://cdn.../disaster_banner.jpg",
+  "image_url": "s3:/announcements/images/disaster_banner.jpg",
   
   "type": "disaster",
   "priority": "critical",
@@ -210,7 +220,7 @@ Get detail satu announcement.
     "id": "ann_disaster_001",
     "title": "Gempa Bumi 7.2 SR",
     "body": "Gempa bumi magnitude 7.2...",
-    "image_url": "https://cdn.../disaster_banner.jpg",
+    "image_url": "https://cdn.example.com/announcements/disaster_banner.jpg",
     "type": "disaster",
     "priority": "critical",
     "scope": "global",

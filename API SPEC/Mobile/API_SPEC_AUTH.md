@@ -131,6 +131,9 @@ Unified Auth Flow untuk login atau registrasi secara otomatis menggunakan ID Tok
   }
   ```
 
+> [!NOTE]
+> **Catatan**: `avatar` pada response Google login adalah URL langsung dari Google (`ext:https://lh3.googleusercontent.com/...`) — tidak di-upload ke S3 kita. Avatar Google tidak perlu melalui flow presign/upload S3. Response tetap menampilkan full URL tanpa prefix.
+
 ---
 
 ### 3. Register (Pendaftaran Akun Baru)

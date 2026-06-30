@@ -269,7 +269,7 @@ Komunitas yang diikuti user (status `active`).
 {
   "name": "Komunitas WNI Seoul",
   "description": "Wadah berbagi info WNI di Seoul.",
-  "avatar_url": "https://cdn/.../avatar.jpg",
+  "avatar_url": "s3:/uploads/communities/avatar.jpg",
   "category_id": "uuid",
   "visibility": "public",
   "region_id": "uuid"
@@ -280,7 +280,7 @@ Komunitas yang diikuti user (status `active`).
 | ------------- | ------------- | --------------------- | ---------------------------------------------- |
 | `name`        | string        | **Yes**               | 3–150 karakter                                 |
 | `description` | string        | No                    | —                                              |
-| `avatar_url`  | string        | No                    | Hasil upload media                             |
+| `avatar_url`  | string        | No                    | File key `s3:` hasil upload media              |
 | `category_id` | string (UUID) | **Yes**               | Pilih dari daftar kategori aktif (endpoint #0) |
 | `visibility`  | string        | No (default `public`) | `public` \| `private`                          |
 | `region_id`   | string (UUID) | No                    | Kosong = komunitas global                      |
@@ -452,7 +452,7 @@ Komunitas yang diikuti user (status `active`).
 {
   "content": "Ada yang tahu tempat makan halal di Gangnam?",
   "media": [
-    { "url": "https://cdn/.../1.jpg", "thumb_url": "https://cdn/.../1_t.jpg", "width": 1080, "height": 1350, "order": 0 }
+    { "url": "s3:/uploads/community/posts/1.jpg", "thumb_url": "s3:/uploads/community/posts/1_t.jpg", "width": 1080, "height": 1350, "order": 0 }
   ]
 }
 ```
@@ -478,24 +478,83 @@ Komunitas yang diikuti user (status `active`).
 
 ---
 
-### 19. Upload Media
+### 19. Presign Media Upload
 
-Upload gambar untuk dipakai di post/avatar. Dipanggil **sebelum** create post.
+Minta presigned URL untuk upload file ke S3. Client upload langsung ke `upload_url` yang dikembalikan, lalu panggil confirm.
 
-- **URL:** `POST /api/v1/mobile/communities/media/upload`
+- **URL:** `POST /api/v1/mobile/communities/media/presign`
 - **Auth:** Required — anggota aktif
-- **Content-Type:** `multipart/form-data`
-- **Form Field:** `file` (image; jpg/png/webp, maks 5MB per file)
-- **Response 201:** `{ "data": { "...": "MediaUploadObject" } }`
-- **Response 422:** `{ "message": "Format / ukuran file tidak valid" }`
+- **Request Body:**
+```json
+{
+  "filename": "photo.jpg",
+  "type": "post"
+}
+```
 
-> Client meng-upload tiap gambar lalu mengumpulkan URL untuk dikirim di field `media` saat create post.
+| Field      | Type   | Required | Keterangan                    |
+| ---------- | ------ | -------- | ----------------------------- |
+| `filename` | string | **Yes**  | Nama file dengan ekstensi     |
+| `type`     | string | **Yes**  | `avatar` / `post`             |
+
+- **Response 200:**
+```json
+{
+  "data": {
+    "upload_url": "https://s3.ap-northeast-2.amazonaws.com/kforum-uploads/...",
+    "file_key": "s3:/uploads/communities/abc123.jpg",
+    "expires_in": 900
+  }
+}
+```
+
+### 20. Confirm Media Upload
+
+Konfirmasi upload selesai. Server memproses file (generate thumbnail, dsb).
+
+- **URL:** `POST /api/v1/mobile/communities/media/confirm`
+- **Auth:** Required — anggota aktif
+- **Request Body:**
+```json
+{
+  "file_key": "s3:/uploads/communities/abc123.jpg"
+}
+```
+
+- **Response 200:**
+```json
+{
+  "data": {
+    "url": "https://cdn.k-forum.id/uploads/communities/abc123.jpg",
+    "thumb_url": "https://cdn.k-forum.id/uploads/communities/abc123_t.jpg",
+    "width": 1080,
+    "height": 1350
+  }
+}
+```
+
+### 21. Delete Media
+
+Hapus media yang sudah di-upload (jika batal dipakai).
+
+- **URL:** `DELETE /api/v1/mobile/communities/media`
+- **Auth:** Required — anggota aktif
+- **Request Body:**
+```json
+{
+  "file_key": "s3:/uploads/communities/abc123.jpg"
+}
+```
+- **Response 200:** `{ "message": "Media berhasil dihapus" }`
+- **Response 404:** `{ "message": "Media tidak ditemukan" }`
+
+> Client memanggil presign, upload langsung ke S3, lalu confirm. File key `s3:` dipakai di request create/update. Jangan kirim base64.
 
 ---
 
 ## Endpoints — Interaksi
 
-### 20. Like / Unlike Post (Toggle)
+### 22. Like / Unlike Post (Toggle)
 
 - **Like:** `POST /api/v1/mobile/communities/posts/{post_id}/like`
 - **Unlike:** `DELETE /api/v1/mobile/communities/posts/{post_id}/like`
@@ -505,7 +564,7 @@ Upload gambar untuk dipakai di post/avatar. Dipanggil **sebelum** create post.
 
 ---
 
-### 21. Get Comments (Top-Level)
+### 23. Get Comments (Top-Level)
 
 - **URL:** `GET /api/v1/mobile/communities/posts/{post_id}/comments`
 - **Auth:** Required — anggota komunitas
@@ -514,7 +573,7 @@ Upload gambar untuk dipakai di post/avatar. Dipanggil **sebelum** create post.
 
 ---
 
-### 22. Get Replies of a Comment
+### 24. Get Replies of a Comment
 
 - **URL:** `GET /api/v1/mobile/communities/comments/{comment_id}/replies`
 - **Auth:** Required — anggota komunitas
@@ -523,7 +582,7 @@ Upload gambar untuk dipakai di post/avatar. Dipanggil **sebelum** create post.
 
 ---
 
-### 23. Create Comment / Reply
+### 25. Create Comment / Reply
 
 - **URL:** `POST /api/v1/mobile/communities/posts/{post_id}/comments`
 - **Auth:** Required — anggota aktif komunitas
@@ -547,7 +606,7 @@ Upload gambar untuk dipakai di post/avatar. Dipanggil **sebelum** create post.
 
 ---
 
-### 24. Delete Comment
+### 26. Delete Comment
 
 - **URL:** `DELETE /api/v1/mobile/communities/comments/{comment_id}`
 - **Auth:** Required — author komentar **atau** permission `moderate_posts`
@@ -556,7 +615,7 @@ Upload gambar untuk dipakai di post/avatar. Dipanggil **sebelum** create post.
 
 ---
 
-### 25. Save / Unsave Post (Toggle)
+### 27. Save / Unsave Post (Toggle)
 
 - **Save:** `POST /api/v1/mobile/communities/posts/{post_id}/save`
 - **Unsave:** `DELETE /api/v1/mobile/communities/posts/{post_id}/save`
@@ -565,7 +624,7 @@ Upload gambar untuk dipakai di post/avatar. Dipanggil **sebelum** create post.
 
 ---
 
-### 26. Get My Saved Posts
+### 28. Get My Saved Posts
 
 - **URL:** `GET /api/v1/mobile/communities/posts/saved`
 - **Auth:** Required (member)
@@ -574,7 +633,7 @@ Upload gambar untuk dipakai di post/avatar. Dipanggil **sebelum** create post.
 
 ---
 
-### 27. Share Post
+### 29. Share Post
 
 Generate deep link untuk dibagikan keluar (mis. WhatsApp). Menaikkan `share_count`.
 
@@ -608,7 +667,7 @@ Generate deep link untuk dibagikan keluar (mis. WhatsApp). Menaikkan `share_coun
 ## Notes & Best Practices
 
 1. **Plain text only.** Field `content` (post & comment) disimpan apa adanya. Client boleh auto-render URL/`@mention`/`#hashtag` saat tampil, tetapi tidak mengirim markup.
-2. **Upload media terpisah.** Upload tiap gambar via endpoint #19 dulu, kumpulkan URL, baru create post. Jangan kirim base64 di body post.
+2. **Upload media via presign.** Panggil presign (#19), upload langsung ke S3, confirm (#20), lalu pakai `s3:` key di request create post. Jangan kirim base64.
 3. **Toggle, bukan duplikat.** Like & save bersifat idempoten — `POST` saat sudah ada cukup mengembalikan state terkini, tidak menambah ganda.
 4. **Counter dari server.** Selalu pakai `like_count`/`comment_count`/`save_count`/`share_count` dari response, jangan hitung di client.
 5. **Private community.** Non-anggota hanya melihat metadata; semua endpoint feed/post/komentar menolak dengan `403` sampai menjadi anggota.
@@ -629,7 +688,7 @@ Browse (1) → Detail (2)
 
 ### Flow B — Posting & Interaksi
 ```
-Upload media (19) → Create post (17)
+Presign media (19) → Upload ke S3 → Confirm (20) → Create post (17)
 Lihat feed (15) → Like (20) / Save (25) / Share (27)
               → Comments (21) → Reply (23, parent_comment_id)
               → Replies (22)

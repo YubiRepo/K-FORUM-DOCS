@@ -817,7 +817,7 @@ Admin menjawab pertanyaan member. Otomatis trigger notifikasi push ke member. Op
 ```json
 {
   "answer_text": "WNA dengan KITAS dapat memiliki properti melalui skema Hak Pakai (HP). Berikut ketentuan lengkapnya:\n\n1. Minimal masa tinggal 1 tahun\n2. Nilai properti sesuai batas yang ditetapkan pemerintah daerah\n3. Tidak bisa dijual kepada WNA lain tanpa izin khusus\n\nReferensi: PP No. 18 Tahun 2021",
-  "attachment_urls": [],
+  "attachment_urls": ["s3:/qna/attachments/uuid.pdf"],
   "is_public": true,
   "convert_to_faq": true,
   "faq_category_id": "cat_uuid_1"
@@ -827,7 +827,7 @@ Admin menjawab pertanyaan member. Otomatis trigger notifikasi push ke member. Op
 | Field | Type | Required | Keterangan |
 |-------|------|----------|-----------|
 | `answer_text` | string | **Yes** | Teks jawaban. Max: 10.000 char. Support Markdown |
-| `attachment_urls` | string[] | No | URL lampiran. Max: 3 item |
+| `attachment_urls` | string[] | No | Path lampiran (format `s3:/path` untuk internal, `ext:https://...` untuk eksternal). Max: 3 item |
 | `is_public` | boolean | No | Default: `true`. `false` = jawaban hanya terlihat oleh member yang bertanya |
 | `convert_to_faq` | boolean | No | Default: `false`. `true` = jawaban otomatis dibuat sebagai FAQ publik baru |
 | `faq_category_id` | UUID | Conditional | **Wajib** jika `convert_to_faq: true`. Kategori FAQ yang akan dibuat |
@@ -1269,6 +1269,11 @@ MODERASI JAWABAN
   GET   /questions/{id}/answers       → daftar jawaban (termasuk pending/hidden)
   PATCH /answers/{id}/moderate        → approve / reject / hide jawaban
   POST  /answers/{id}/accept          → tandai jawaban sbg rujukan valid (notif)
+
+MEDIA / LAMPIRAN
+  POST   /attachments/presign             → dapatkan presigned URL untuk upload lampiran
+  POST   /attachments/confirm             → konfirmasi upload selesai
+  DELETE /attachments/{attachment_id}     → hapus lampiran
 
 PENGATURAN
   GET  /settings/bot                  → lihat konfigurasi bot + mode moderasi

@@ -19,6 +19,16 @@ Dokumentasi API untuk superadmin/admin manage users di backoffice dashboard — 
 
 ---
 
+## Daftar Endpoint — Media Avatar Upload
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| POST | `/api/v1/web/media/avatar/presign` | Generate presigned URL for avatar upload |
+| POST | `/api/v1/web/media/avatar/confirm` | Confirm avatar upload |
+| DELETE | `/api/v1/web/media/avatar/{file_id}` | Delete uploaded avatar |
+
+---
+
 ## Model Data Utama
 
 ### 1. User Object (Full)
@@ -233,9 +243,9 @@ Edit profil user (name, email, phone, avatar).
     "name": "Andi Pratama Updated",
     "email": "andi.new@example.com",
     "phone": "08123456790",
-    "avatar": "https://example.com/new-avatar.jpg"
+    "avatar": "s3:/users/avatars/new-avatar.jpg"
   }
-  ```
+```
 
 - **Response (Success 200)**:
   ```json
