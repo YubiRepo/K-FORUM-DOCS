@@ -51,18 +51,25 @@ UI mengirim nilai **dengan prefix**:
 
 ### Response (Read) — GET / Detail
 
-API selalu mengembalikan **full URL tanpa prefix**:
+API mengembalikan **dua field** untuk setiap media:
 
+| Field | Format | Kegunaan |
+|-------|--------|----------|
+| `xxx_url` | Full CDN URL | Preview gambar di UI (`<img src="...">`) |
+| `xxx_raw` | Nilai asli DB (`s3:` / `ext:` / plain key) | Deteksi tipe media & kirim balik saat PUT |
+
+Contoh:
 ```json
 {
-  "image_url": "https://cdn.example.com/ads/images/uuid.jpg"
+  "thumbnail_url": "https://cdn.example.com/news/thumbnails/uuid.jpg",
+  "thumbnail_raw": "s3:/news/thumbnails/uuid.jpg"
 }
 ```
-
 Untuk URL eksternal:
 ```json
 {
-  "avatar": "https://lh3.googleusercontent.com/photo.jpg"
+  "avatar_url": "https://lh3.googleusercontent.com/photo.jpg",
+  "avatar_raw": "ext:https://lh3.googleusercontent.com/photo.jpg"
 }
 ```
 
@@ -91,9 +98,9 @@ Untuk URL eksternal:
 { "image_url": "ext:https://partner.com/logo.png" }
 ```
 
-### GET Response (tidak berubah)
+### GET Response
 ```json
-{ "image_url": "https://cdn.example.com/ads/images/uuid.jpg" }
+{ "image_url": "https://cdn.example.com/ads/images/uuid.jpg", "image_raw": "s3:/ads/images/uuid.jpg" }
 ```
 
 ---
@@ -199,7 +206,95 @@ Validasi dilakukan di usecase presign, bukan di handler.
 
 ---
 
-## 11. Catatan untuk Google Login
+## 11. Refactoring Frontend — Deteksi Tipe Media via `_raw` Field
+
+### 11.1. Latar Belakang
+
+Response DTO sekarang mengembalikan dua field per media: `xxx_url` (CDN untuk preview) dan `xxx_raw` (nilai asli dari DB dengan prefix `s3:` / `ext:`). FE harus menggunakan `xxx_raw` untuk menentukan mode komponen upload (upload mode vs paste URL mode).
+
+### 11.2. Aturan Deteksi
+
+| Nilai `xxx_raw` | Arti | Mode Komponen | Kirim ke PUT/UPDATE |
+|-----------------|------|---------------|---------------------|
+| Dimulai `s3:` | File S3 internal | **Upload mode** (drag & drop / file picker) | Kirim `xxx_raw` apa adanya |
+| Dimulai `ext:` | URL eksternal | **URL mode** (text input) | Kirim `xxx_raw` apa adanya |
+| Plain key (`/path`) | Data lama (backward compat) | **Upload mode** atau biarkan URL | Kirim `xxx_raw` apa adanya |
+| `null` / `""` | Tidak ada media | — | Kirim `null` |
+
+### 11.3. Yang Harus Diubah di FE
+
+Untuk setiap komponen form yang memiliki field media dengan dua mekanisme (paste URL + upload via presign):
+
+| # | Perubahan | Penjelasan |
+|---|-----------|------------|
+| 1 | **Gunakan `xxx_raw` sebagai `modelValue`** | Ganti binding dari `xxx_url` ke `xxx_raw` agar komponen upload bisa deteksi `s3:` vs `ext:` |
+| 2 | **Pass `xxx_url` sebagai `preview-url` prop** | Untuk preview gambar saat `modelValue` adalah `s3:` key (tidak bisa langsung di-render sebagai `<img src>`) |
+| 3 | **Kirim `xxx_raw` di payload PUT** | Saat media tidak berubah, kirim nilai `xxx_raw` (bukan `xxx_url`). Backend `NormalizeValue` tetap handle CDN URL, tapi `xxx_raw` lebih eksplisit |
+| 4 | **Hapus panggilan `/confirm` setelah upload** | Confirm dilakukan otomatis oleh backend saat entity disimpan. FE cukup kirim `s3:` key di payload bisnis |
+| 5 | **Hapus mode toggle manual** | Mode upload/URL ditentukan otomatis dari prefix `xxx_raw`, bukan dari toggle user |
+
+### 11.4. Contoh Implementasi (Vue)
+
+```vue
+<MediaUploadField
+  v-model="form.thumbnail_raw"           // ← pakai _raw, bukan _url
+  :preview-url="form.thumbnail_url"       // ← CDN URL untuk preview
+  domain="news"
+  type="thumbnail"
+  kind="image"
+/>
+```
+
+Di dalam `MediaUploadField`:
+
+```typescript
+// Deteksi mode dari modelValue
+onMounted(() => {
+  if (props.modelValue?.startsWith('s3:')) {
+    mode.value = 'upload'
+  } else if (props.modelValue?.startsWith('ext:')) {
+    mode.value = 'url'
+  } else if (props.modelValue) {
+    mode.value = 'url' // backward compat
+  }
+})
+
+// Preview: fallback dari cache lokal, lalu dari props.previewUrl
+const previewSrc = computed(() => {
+  if (!value.value) return ''
+  if (value.value.startsWith('s3:')) {
+    return localCache[value.value] || props.previewUrl || ''
+  }
+  if (value.value.startsWith('ext:')) {
+    return value.value.slice(4)
+  }
+  return value.value
+})
+```
+
+### 11.5. Domain yang Perlu Refactoring
+
+Berlaku untuk semua domain yang memiliki dua mekanisme (paste URL + upload presign):
+
+| Domain | Field `_url` | Field `_raw` |
+|--------|-------------|--------------|
+| Ads | `image_url`, `video_url`, `thumbnail_url`, `icon_url`, `sponsor_logo_url` | `image_raw`, `video_raw`, `thumbnail_raw`, `icon_raw`, `sponsor_logo_raw` |
+| Region | `image_url` | `image_raw` |
+| Announcement | `image_url` | `image_raw` |
+| Community | `avatar_url`, `url`, `thumb_url` | `avatar_raw`, `url_raw`, `thumb_url_raw` |
+| Event | `cover_image`, `images[]`, `avatar` (organizer) | `cover_image_raw`, `images_raw`, `avatar_raw` |
+| News | `thumbnail_url` | `thumbnail_raw` |
+| User Management | `avatar_url` | `avatar_raw` |
+| QnA | `attachment_urls[]`, `user_avatar`, `answered_by_avatar`, `asker_avatar` | `attachment_urls_raw`, `user_avatar_raw`, `answered_by_avatar_raw`, `asker_avatar_raw` |
+| Directory | `logo_url`, `images[]`, `primary_image`, `image` | `logo_raw`, `images_raw`, `primary_image_raw`, `image_raw` |
+| Subscription | `manual_proof_url` | `manual_proof_raw` |
+| Bug Report | `attachments[]` | `attachments_raw` |
+| Accounting | `attachment_url` | `attachment_raw` |
+| Profile | `avatar`, `image_url` | `avatar_raw`, `image_raw` |
+
+---
+
+## 12. Catatan untuk Google Login
 
 Setelah Google login, `avatar` di response session/me adalah URL Google langsung (`ext:`) — tidak di-upload ke S3 kita lagi. Response tetap mengembalikan full URL tanpa prefix:
 
