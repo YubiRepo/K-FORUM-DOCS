@@ -59,6 +59,7 @@ Field `is_translated` dan `available_languages` membantu frontend menampilkan in
   "author_label": "Korean Association Indonesia",
   "language": "en",
   "is_translated": true,
+  "available_languages": ["id", "en", "ko"],
   "like_count": 152,
   "comment_count": 23,
   "view_count": 4820,
@@ -92,6 +93,7 @@ Field `is_translated` dan `available_languages` membantu frontend menampilkan in
   },
   "author_label": "Korean Association Indonesia",
   "published_by_label": "Korean Association Indonesia",
+  "original_url": "https://detik.com/sport/12345",
   "language": "en",
   "is_translated": true,
   "available_languages": ["id", "en", "ko"],
@@ -104,6 +106,8 @@ Field `is_translated` dan `available_languages` membantu frontend menampilkan in
   "published_at": "2026-06-03T10:00:00.000Z"
 }
 ```
+
+> `original_url` hanya muncul untuk artikel hasil scraping (field bernilai `null`/absen untuk artikel manual). Dipakai untuk menampilkan link "Baca sumber asli" — publisher yang ditampilkan ke pembaca tetap `author_label`/`published_by_label` (label KAI), bukan nama portal sumber.
 
 ### 3. Comment Object
 
