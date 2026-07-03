@@ -29,6 +29,12 @@ Dokumentasi API untuk superadmin mengelola ads, moderasi, ad settings, dan melih
 | GET | `/analytics` | Analytics aggregate semua ads |
 | GET | `/settings` | Ambil ad settings |
 | PUT | `/settings` | Update ad settings |
+| POST | `/media/image/presign` | Minta presigned URL upload gambar |
+| POST | `/media/image/confirm` | Konfirmasi upload gambar |
+| DELETE | `/media/image` | Tandai gambar sebagai deleted |
+| POST | `/media/video/presign` | Minta presigned URL upload video |
+| POST | `/media/video/confirm` | Konfirmasi upload video |
+| DELETE | `/media/video` | Tandai video sebagai deleted |
 
 ---
 
@@ -115,7 +121,7 @@ Buat ads baru. Superadmin langsung `active` tanpa perlu approval.
 {
   "title": "Promo Tiket Lebaran 2026",
   "ad_type": "image_banner",
-  "image_url": "https://cdn.kai.id/ads/lebaran-2026.jpg",
+  "image_url": "s3:/ads/images/lebaran-2026.jpg",
   "click_url": "https://kai.id/promo/lebaran-2026",
   "start_date": "2026-06-01",
   "end_date": "2026-06-30",
@@ -128,8 +134,8 @@ Buat ads baru. Superadmin langsung `active` tanpa perlu approval.
 {
   "title": "Video Promo KAI Wisata",
   "ad_type": "video_banner",
-  "video_url": "https://cdn.kai.id/ads/wisata-2026.mp4",
-  "thumbnail_url": "https://cdn.kai.id/ads/wisata-2026-thumb.jpg",
+  "video_url": "s3:/ads/videos/wisata-2026.mp4",
+  "thumbnail_url": "s3:/ads/images/wisata-2026-thumb.jpg",
   "click_url": "https://kai.id/wisata",
   "start_date": "2026-06-01",
   "end_date": "2026-06-30",
@@ -145,7 +151,7 @@ Buat ads baru. Superadmin langsung `active` tanpa perlu approval.
   "headline": "Gratis ongkir semua destinasi!",
   "body_text": "Pesan tiket kereta sekarang dan nikmati promo gratis ongkir untuk semua rute.",
   "cta_label": "Pesan Sekarang",
-  "icon_url": "https://cdn.kai.id/ads/icon-train.png",
+  "icon_url": "s3:/ads/images/icon-train.png",
   "click_url": "https://kai.id/pesan-tiket",
   "start_date": "2026-06-01",
   "end_date": "2026-06-20",
@@ -159,9 +165,9 @@ Buat ads baru. Superadmin langsung `active` tanpa perlu approval.
   "title": "Native Ad Hotel Sentral",
   "ad_type": "native_ad",
   "body_text": "Hotel terbaik dekat Stasiun Gambir. Tarif mulai Rp 350rb/malam, free breakfast.",
-  "image_url": "https://cdn.hotelsentral.id/banner.jpg",
+  "image_url": "ext:https://cdn.hotelsentral.id/banner.jpg",
   "sponsor_name": "Hotel Sentral Jakarta",
-  "sponsor_logo_url": "https://cdn.hotelsentral.id/logo.png",
+  "sponsor_logo_url": "ext:https://cdn.hotelsentral.id/logo.png",
   "click_url": "https://hotelsentral.id/promo-kai",
   "start_date": "2026-06-10",
   "end_date": "2026-06-30",
@@ -270,7 +276,7 @@ Jika `active` atau `paused`, superadmin harus pause dulu via PATCH `/status`.
 ```json
 {
   "title": "Promo Tiket Lebaran 2026 — Update",
-  "image_url": "https://cdn.kai.id/ads/lebaran-2026-v2.jpg",
+  "image_url": "s3:/ads/images/lebaran-2026-v2.jpg",
   "click_url": "https://kai.id/promo/lebaran-2026-v2",
   "end_date": "2026-07-05",
   "notes": "Diperpanjang 5 hari"

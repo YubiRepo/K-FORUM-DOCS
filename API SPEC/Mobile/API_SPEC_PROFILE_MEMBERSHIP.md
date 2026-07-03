@@ -294,39 +294,57 @@ Mengupdate informasi profile personal user (name, bio, address, personal details
 
 ---
 
-### 3. Upload Avatar
-Mengupload atau mengganti avatar profile user. File harus berupa image (jpg, png, webp).
+### 3. Avatar Presign Upload
+Mendapatkan presigned URL untuk mengupload avatar ke S3. Client kemudian upload file langsung ke S3 menggunakan presigned URL tersebut.
 
-- **URL**: `POST /api/v1/mobile/profile/avatar`
+- **URL**: `POST /api/v1/mobile/profile/avatar/presign`
 - **Autentikasi**: Ya (`Bearer <access_token>`)
-- **Content-Type**: `multipart/form-data`
 - **Request Body**:
-  ```
-  file: <binary_image_file> (max 5MB, format: jpg, png, webp)
+  ```json
+  {
+    "filename": "avatar.jpg",
+    "mime_type": "image/jpeg"
+  }
   ```
 - **Response (Success 200)**:
   ```json
   {
-    "message": "Avatar berhasil diupload",
+    "message": "Presigned URL berhasil dibuat",
     "data": {
-      "avatar": "https://example.com/avatars/usr_90210_1716277200.jpg",
-      "avatar_thumbnail": "https://example.com/avatars/usr_90210_1716277200_thumb.jpg"
-    }
-  }
-  ```
-- **Response (Error 400 - Invalid File)**:
-  ```json
-  {
-    "message": "File tidak valid",
-    "errors": {
-      "file": ["File harus berupa gambar (jpg, png, webp)", "Ukuran file maksimal 5MB"]
+      "presigned_url": "https://s3-bucket.s3.ap-southeast-1.amazonaws.com/...",
+      "s3_path": "s3:/avatars/usr_90210/1716277200.jpg",
+      "expires_in": 3600
     }
   }
   ```
 
 ---
 
-### 4. Delete Avatar
+### 4. Avatar Confirm Upload
+Mengkonfirmasi bahwa avatar sudah berhasil diupload ke S3 dan memperbarui profile user.
+
+- **URL**: `POST /api/v1/mobile/profile/avatar/confirm`
+- **Autentikasi**: Ya (`Bearer <access_token>`)
+- **Request Body**:
+  ```json
+  {
+    "s3_path": "s3:/avatars/usr_90210/1716277200.jpg"
+  }
+  ```
+- **Response (Success 200)**:
+  ```json
+  {
+    "message": "Avatar berhasil diperbarui",
+    "data": {
+      "avatar": "https://example.com/avatars/usr_90210_1716277200.jpg",
+      "avatar_thumbnail": "https://example.com/avatars/usr_90210_1716277200_thumb.jpg"
+    }
+  }
+  ```
+
+---
+
+### 5. Delete Avatar
 Menghapus avatar profile user (set ke default/null).
 
 - **URL**: `DELETE /api/v1/mobile/profile/avatar`
@@ -344,7 +362,7 @@ Menghapus avatar profile user (set ke default/null).
 
 ---
 
-### 5. Get Region Memberships
+### 6. Get Region Memberships
 Mengambil daftar semua region yang diikuti user.
 
 - **URL**: `GET /api/v1/mobile/profile/memberships/regions`
@@ -380,7 +398,7 @@ Mengambil daftar semua region yang diikuti user.
 
 ---
 
-### 6. Get Community Memberships
+### 7. Get Community Memberships
 Mengambil daftar semua komunitas yang diikuti user beserta community role-nya.
 
 - **URL**: `GET /api/v1/mobile/profile/memberships/communities`
@@ -421,7 +439,7 @@ Mengambil daftar semua komunitas yang diikuti user beserta community role-nya.
 
 ---
 
-### 7. Get Subscription Details
+### 8. Get Subscription Details
 Mengambil informasi subscription & plan user secara detail.
 
 - **URL**: `GET /api/v1/mobile/profile/subscription`
@@ -455,7 +473,7 @@ Mengambil informasi subscription & plan user secara detail.
 
 ---
 
-### 8. Change Email (Request)
+### 9. Change Email (Request)
 Melakukan request untuk mengubah email. System akan mengirimkan OTP verifikasi ke email lama dan email baru.
 
 - **URL**: `POST /api/v1/mobile/profile/email/change-request`
@@ -486,7 +504,7 @@ Melakukan request untuk mengubah email. System akan mengirimkan OTP verifikasi k
 
 ---
 
-### 9. Verify Email Change
+### 10. Verify Email Change
 Memverifikasi perubahan email dengan OTP yang diterima. User harus memberikan OTP dari email lama dan email baru.
 
 - **URL**: `POST /api/v1/mobile/profile/email/verify-change`
@@ -511,7 +529,7 @@ Memverifikasi perubahan email dengan OTP yang diterima. User harus memberikan OT
 
 ---
 
-### 10. Delete Account (Request)
+### 11. Delete Account (Request)
 Melakukan request untuk menghapus akun. System akan mengirimkan konfirmasi via email dan OTP.
 
 > [!WARNING]
@@ -540,7 +558,7 @@ Melakukan request untuk menghapus akun. System akan mengirimkan konfirmasi via e
 
 ---
 
-### 11. Confirm Account Deletion
+### 12. Confirm Account Deletion
 Mengkonfirmasi penghapusan akun dengan OTP yang diterima via email.
 
 - **URL**: `POST /api/v1/mobile/profile/account/confirm-delete`
@@ -564,7 +582,7 @@ Mengkonfirmasi penghapusan akun dengan OTP yang diterima via email.
 
 ---
 
-### 12. Cancel Account Deletion
+### 13. Cancel Account Deletion
 Membatalkan permintaan penghapusan akun jika masih dalam periode 30 hari.
 
 - **URL**: `POST /api/v1/mobile/profile/account/cancel-delete`
@@ -637,17 +655,19 @@ Membatalkan permintaan penghapusan akun jika masih dalam periode 30 hari.
 
 3. **Soft Delete**: Untuk account deletion, implementasi soft delete selama 30 hari grace period sebelum permanent delete.
 
-4. **Avatar CDN**: Avatar harus di-serve dari CDN untuk performa optimal. Include thumbnail version untuk list views.
+4. **Avatar Upload Flow**: Avatar diupload melalui presigned URL flow. Client memanggil `POST /avatar/presign` untuk mendapatkan presigned URL S3, upload file langsung ke S3, lalu panggil `POST /avatar/confirm` dengan `s3_path` untuk memperbarui profile. Avatar di-serve dari CDN untuk performa optimal. Include thumbnail version untuk list views.
 
-5. **Membership Pagination**: Untuk komunitas/region dengan banyak anggota, gunakan pagination untuk menghindari response yang terlalu besar. Default 10 items per page, max 50.
+5. **Media Prefix Scheme**: Request payload yang mereferensikan path file S3 menggunakan prefix `s3:` (contoh: `"s3:/avatars/usr_90210/file.jpg"`). URL eksternal menggunakan prefix `ext:` (contoh: `"ext:https://example.com/image.jpg"`). Response GET tetap menggunakan full URL CDN tanpa prefix.
 
-6. **Timestamp Format**: Semua timestamp harus dalam format ISO 8601 UTC (contoh: `2026-05-20T14:20:00.000Z`).
+6. **Membership Pagination**: Untuk komunitas/region dengan banyak anggota, gunakan pagination untuk menghindari response yang terlalu besar. Default 10 items per page, max 50.
 
-7. **Language Support**: Gunakan `Accept-Language` header untuk mengirimkan error messages & benefits dalam bahasa user.
+7. **Timestamp Format**: Semua timestamp harus dalam format ISO 8601 UTC (contoh: `2026-05-20T14:20:00.000Z`).
 
-8. **Parallel Requests**: Client boleh parallel fetch `/me`, `/memberships/*`, dan `/subscription` untuk faster load time. Gunakan Promise.all() atau equivalent async pattern.
+8. **Language Support**: Gunakan `Accept-Language` header untuk mengirimkan error messages & benefits dalam bahasa user.
 
-9. **Caching Strategy**: 
+9. **Parallel Requests**: Client boleh parallel fetch `/me`, `/memberships/*`, dan `/subscription` untuk faster load time. Gunakan Promise.all() atau equivalent async pattern.
+
+10. **Caching Strategy**: 
    - `/profile/me` → Cache 5-10 menit (atau sampai user update)
    - `/memberships/*` → Cache 15-30 menit
    - `/subscription` → Cache 15 menit (critical data, check frequently untuk detect expiry)
