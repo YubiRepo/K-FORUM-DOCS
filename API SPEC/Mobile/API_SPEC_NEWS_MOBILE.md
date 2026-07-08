@@ -46,6 +46,7 @@ Field `is_translated` dan `available_languages` membantu frontend menampilkan in
   "title": "Timnas Indonesia Lolos ke Final",
   "summary": "Tim nasional sepakbola Indonesia berhasil...",
   "thumbnail_url": "https://cdn.kai.app/news/thumb_001.jpg",
+  "author": "Andi Pratama",
   "category": {
     "id": "cat_sport",
     "name": "Olahraga",

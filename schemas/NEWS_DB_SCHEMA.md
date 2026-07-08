@@ -322,6 +322,14 @@ CREATE TABLE articles (
   author_region_id      UUID         NULL,
   -- FK ke regions (null jika dari KAI Pusat)
 
+  -- Penulis & thumbnail (satu per artikel, SAMA untuk semua bahasa —
+  -- bukan per-translation karena translate tidak mengubah siapa penulis
+  -- asli atau gambar artikelnya)
+  author                VARCHAR(200) NULL,
+  -- Nama penulis asli (hasil scraping atau diisi manual)
+  thumbnail_url         TEXT         NULL,
+  -- URL gambar thumbnail artikel
+
   -- Stats (denormalized untuk performa)
   view_count            INTEGER      NOT NULL DEFAULT 0,
   unique_view_count     INTEGER      NOT NULL DEFAULT 0,
@@ -385,6 +393,8 @@ CREATE INDEX idx_articles_author_region
 -- ============================================================================
 -- 8. ARTICLE_TRANSLATIONS
 -- Konten artikel per bahasa. Satu artikel = N translations (satu per bahasa).
+-- `author` dan `thumbnail_url` TIDAK di sini — keduanya sama untuk semua
+-- bahasa sehingga disimpan sekali di articles.author / articles.thumbnail_url.
 -- ============================================================================
 
 CREATE TABLE article_translations (
@@ -396,8 +406,6 @@ CREATE TABLE article_translations (
   title            TEXT         NOT NULL,
   content          TEXT         NOT NULL,
   summary          TEXT         NULL,
-  author           VARCHAR(200) NULL,
-  thumbnail_url    TEXT         NULL,
   tags             TEXT[]       NULL,
 
   -- Translation metadata
@@ -568,7 +576,10 @@ CREATE INDEX idx_article_comments_user
 |-------|-----------|
 | `google` | Ditranslate via Google Translate API |
 | `openai` | Ditranslate via OpenAI |
+| `noop` | Diproses lewat pipeline translation otomatis (worker relay), tapi provider AI asli **belum di-plug in** — isi konten sama persis dengan original, cuma di-tag bahasa lain. Sementara sampai Google/OpenAI API key tersedia (lihat `PLAN_NEWS_SCRAPER_ENGINE.md`) |
 | `null` | Diisi manual oleh editor |
+
+> `noop` sengaja dibedakan dari `null` supaya tetap traceable: `null` = editor yang isi manual, `noop` = sudah lewat proses translate_status pending→processing→done otomatis, hasilnya aja yang belum berupa terjemahan asli.
 
 ---
 
@@ -579,7 +590,9 @@ CREATE INDEX idx_article_comments_user
 -- Backend cek article_translations untuk bahasa yang diminta
 SELECT
   a.id,
+  a.author,
   a.author_label,
+  a.thumbnail_url,
   a.published_by_label,
   a.like_count,
   a.comment_count,
@@ -588,7 +601,6 @@ SELECT
   a.is_featured,
   t.title,
   t.summary,
-  t.thumbnail_url,
   t.language,
   t.is_original
 FROM articles a
@@ -908,6 +920,8 @@ CREATE TABLE IF NOT EXISTS articles (
   status                VARCHAR(20)   NOT NULL DEFAULT 'draft',
   author_label          VARCHAR(100)  NOT NULL,
   author_region_id      UUID          NULL,
+  author                VARCHAR(200)  NULL,
+  thumbnail_url         TEXT          NULL,
   view_count            INTEGER       NOT NULL DEFAULT 0,
   unique_view_count     INTEGER       NOT NULL DEFAULT 0,
   like_count            INTEGER       NOT NULL DEFAULT 0,
@@ -940,8 +954,6 @@ CREATE TABLE IF NOT EXISTS article_translations (
   title            TEXT        NOT NULL,
   content          TEXT        NOT NULL,
   summary          TEXT        NULL,
-  author           VARCHAR(200) NULL,
-  thumbnail_url    TEXT        NULL,
   tags             TEXT[]      NULL,
   is_original      BOOLEAN     NOT NULL DEFAULT false,
   translate_status VARCHAR(20) NULL,
@@ -1047,6 +1059,35 @@ CREATE TRIGGER trg_article_translations_updated_at
 CREATE TRIGGER trg_article_comments_updated_at
   BEFORE UPDATE ON article_comments
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- ============================================================================
+-- Migration 12: Pindahkan author & thumbnail_url dari article_translations
+-- ke articles (untuk database yang sudah berjalan dengan skema lama).
+--
+-- Alasan: author (penulis asli) dan thumbnail artikel TIDAK berubah antar
+-- bahasa hasil translate — jadi seharusnya satu nilai per artikel, bukan
+-- per-translation. Backfill diambil dari baris is_original=true karena itu
+-- konten asli (hasil scraping/tulisan editor), sumber kebenaran untuk kedua
+-- field ini.
+-- ============================================================================
+ALTER TABLE articles
+  ADD COLUMN IF NOT EXISTS author        VARCHAR(200) NULL,
+  ADD COLUMN IF NOT EXISTS thumbnail_url TEXT         NULL;
+
+UPDATE articles a
+SET author        = t.author,
+    thumbnail_url = t.thumbnail_url
+FROM article_translations t
+WHERE t.article_id = a.id
+  AND t.is_original = true;
+
+ALTER TABLE article_translations
+  DROP COLUMN IF EXISTS author,
+  DROP COLUMN IF EXISTS thumbnail_url;
+
+-- Catatan: idx_article_translations_fts (full-text search) hanya memakai
+-- title + content, tidak terpengaruh oleh migration ini.
 ```
 
 ---

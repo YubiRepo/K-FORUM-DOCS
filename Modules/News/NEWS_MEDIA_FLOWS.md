@@ -2,6 +2,8 @@
 
 Dokumen ini menjelaskan mekanisme upload, konfirmasi, update, dan delete media (thumbnail) untuk artikel News.
 
+> `thumbnail_url` (dan `author`) adalah field **article-level** (kolom di tabel `articles`), bukan per-translation — satu thumbnail untuk semua bahasa hasil translate. Lihat `NEWS_DB_SCHEMA.md` §7.
+
 ---
 
 ## 1. Konsep Prefix Scheme
@@ -49,7 +51,8 @@ UI                         API                          MinIO / media_uploads
   │                          │── NormalizeValue ────────────> │
   │                          │   ("s3:..." → return as-is)    │
   │                          │                                │
-  │                          │── Save article + translation ─>│
+  │                          │── Save article (author +      >│
+  │                          │   thumbnail_url) + translation │
   │                          │                                │
   │                          │── ConfirmUpload ────────────> │
   │                          │   PENDING → CONFIRMED         │
@@ -77,9 +80,9 @@ UI                         API                          MinIO / media_uploads
 
 **Step 3b — Confirm implisit via payload** (`POST /web/news/articles`)
 - Dalam `CreateArticleUseCase.Execute()`:
-  1. `normalizeNewsThumbnailKeyPtr(svc, req.Translation.ThumbnailURL)` → NormalizeValue
-  2. Save translation (ThumbnailURL tersimpan dengan prefix `s3:`)
-  3. `confirmNewsThumbnailKey(ctx, svc, translation.ThumbnailURL)` → ConfirmUpload
+  1. `normalizeNewsThumbnailKeyPtr(svc, req.ThumbnailURL)` → NormalizeValue (field **article-level**, bukan `req.Translation.ThumbnailURL`)
+  2. Save article (`ThumbnailURL` & `Author` tersimpan di `articles`, prefix `s3:` untuk thumbnail)
+  3. `confirmNewsThumbnailKey(ctx, svc, article.ThumbnailURL)` → ConfirmUpload
 
 ---
 
@@ -91,23 +94,24 @@ UI                         API                          MinIO / media_uploads
 UI                          API
 ──                          ───
   │── GET /articles/{id} ──> │
-  │<── { translations: [{    │
-  │       thumbnail_url:     │
-  │        "https://cdn.../  │
-  │         uuid.jpg",       │
-  │       thumbnail_raw:     │
-  │        "s3:/news/        │
-  │         thumbnails/      │
-  │         uuid.jpg" }] }   │
-  │                          │
-  │── PUT /articles/{id} ──> │
-  │    { translation: {      │
-  │      thumbnail_url:      │
+  │<── { thumbnail_url:      │
+  │       "https://cdn.../   │
+  │        uuid.jpg",        │
+  │      thumbnail_raw:      │
   │       "s3:/news/         │
   │        thumbnails/       │
-  │        NEW.jpg" } }      │
+  │        uuid.jpg" }       │
   │                          │
-  │── Fetch old translation ─>│
+  │── PUT /articles/{id} ──> │
+  │    { thumbnail_url:      │
+  │       "s3:/news/         │
+  │        thumbnails/       │
+  │        NEW.jpg" }        │
+  │    (field article-level, │
+  │     bukan di dalam        │
+  │     `translation`)       │
+  │                          │
+  │── Fetch old article ────>│
   │   old = "s3:/news/       │
   │          thumbnails/     │
   │          OLD.jpg"        │
@@ -126,8 +130,8 @@ UI                          API
   │   │       CONFIRMED      │
   │   └── Tidak → skip       │
   │                          │
-  │── SaveOrUpdate ─────────>│
-  │   translation            │
+  │── Update ───────────────>│
+  │   article                │
 ```
 
 ### 3b. Update — Thumbnail dihapus (nil / "")
@@ -136,9 +140,7 @@ UI                          API
 UI                          API
 ──                          ───
   │── PUT /articles/{id} ──> │
-  │    { translation: {      │
-  │      thumbnail_url: null │
-  │    } }                   │
+  │    { thumbnail_url: null }│
   │                          │
   │── normalizeNewsThumbnail │
   │    KeyPtr(svc, nil)      │
@@ -150,7 +152,7 @@ UI                          API
   │   → MarkDeleted(oldNorm) │
   │     CONFIRMED → DELETED  │
   │                          │
-  │── Save translation       │
+  │── Update article         │
   │    ThumbnailURL = nil    │
 ```
 
@@ -160,10 +162,9 @@ UI                          API
 UI                          API
 ──                          ───
   │── PUT /articles/{id} ──> │
-  │    { translation: {      │
-  │      thumbnail_url:      │
+  │    { thumbnail_url:      │
   │       "https://cdn.../   │
-  │        uuid.jpg" } }     │
+  │        uuid.jpg" }       │
   │    (CDN URL dari GET     │
   │     response)            │
   │                          │
@@ -175,15 +176,15 @@ UI                          API
   │── oldNorm == newNorm?    │
   │   → Skip (no-op)         │
   │                          │
-  │── SaveOrUpdate ─────────>│
-  │   translation            │
+  │── Update ───────────────>│
+  │   article                │
 ```
 
 ### Kode yang menangani (update_article.go)
 
 ```go
-// 1. Ambil old translation
-oldTranslation, _ := uc.translationRepo.FindByArticleAndLanguage(ctx, articleID, article.OriginalLanguage)
+// 1. Ambil old article
+oldArticle, _ := uc.articleRepo.FindByID(ctx, articleID)
 
 // 2. Normalize old vs new
 oldNorm := uc.mediaUploadSvc.NormalizeValue(*oldThumbnail)
@@ -194,12 +195,14 @@ if oldNorm != "" && oldNorm != newNorm {
     _ = uc.mediaUploadSvc.MarkDeleted(ctx, oldNorm)
 }
 
-// 4. Simpan translation baru
-uc.translationRepo.SaveOrUpdate(ctx, translation)
+// 4. Simpan article (bukan translation)
+uc.articleRepo.Update(ctx, article)
 
 // 5. Confirm thumbnail baru
-confirmNewsThumbnailKey(ctx, uc.mediaUploadSvc, translation.ThumbnailURL)
+confirmNewsThumbnailKey(ctx, uc.mediaUploadSvc, article.ThumbnailURL)
 ```
+
+> Diff old/new dan mark-deleted sekarang jalan **sekali per update artikel** (di level `Article`), bukan berulang tiap translation di-save.
 
 ---
 
@@ -214,16 +217,12 @@ UI                          API
   │── EnsureDeletable() ────>│
   │   (hanya draft/rejected) │
   │                          │
-  │── FindAllByArticle ─────>│
-  │   Ambil semua            │
-  │   translations           │
-  │                          │
-  │── Untuk setiap           │
-  │   translation:           │
-  │   MarkDeleted(           │
-  │    translation.          │
-  │    ThumbnailURL)         │
+  │── MarkDeleted(           │
+  │    article.ThumbnailURL) │
   │   CONFIRMED → DELETED    │
+  │   (sekali, article-level,│
+  │    bukan loop tiap       │
+  │    translation)          │
   │                          │
   │── articleRepo.Delete ───>│
   │   (CASCADE ke            │
@@ -240,16 +239,14 @@ UI                          API
 ──                          ───
   │── PUT /articles/{id}/   │
   │    translations/{lang}  │
-  │    { thumbnail_url:     │
-  │      "s3:/..." }        │
+  │    { title, content,    │
+  │      summary, tags }    │
   │       ─────────────────> │
   │                          │
-  │── NormalizeValue ───────>│
   │── SaveOrUpdate ─────────>│
-  │── ConfirmUpload ────────>│
 ```
 
-Catatan: Add translation **tidak** melakukan mark deleted untuk thumbnail lama — karena setiap translation per bahasa punya thumbnail masing-masing yang independen.
+Catatan: `thumbnail_url` dan `author` **tidak lagi** ada di endpoint add-translation — keduanya article-level, sekali per artikel. Tidak ada lagi `NormalizeValue`/`ConfirmUpload` di flow ini.
 
 ---
 
@@ -260,11 +257,11 @@ Catatan: Add translation **tidak** melakukan mark deleted untuk thumbnail lama �
 | Presign | `get_thumbnail_presign_url.go` | `POST /web/news/media/thumbnail/presign` | `RequestUpload` → PENDING |
 | Confirm eksplisit | `confirm_thumbnail.go` | `POST /web/news/media/thumbnail/confirm` | `ConfirmUpload` → CONFIRMED |
 | Delete eksplisit | `delete_thumbnail.go` | `DELETE /web/news/media/thumbnail` | `MarkDeleted` → DELETED |
-| Create article | `create_article.go` | `POST /web/news/articles` | `NormalizeValue` + `ConfirmUpload` |
-| Submit article | `submit_article.go` | `POST /mobile/news/articles` | `NormalizeValue` + `ConfirmUpload` |
-| Update article | `update_article.go` | `PUT /web/news/articles/{id}` | Compare old/new → `MarkDeleted` + `ConfirmUpload` |
-| Add translation | `add_translation.go` | `PUT /web/news/articles/{id}/translations/{lang}` | `NormalizeValue` + `ConfirmUpload` |
-| Delete article | `delete_article.go` | `DELETE /web/news/articles/{id}` | `MarkDeleted` semua thumbnail |
+| Create article | `create_article.go` | `POST /web/news/articles` | `NormalizeValue` + `ConfirmUpload` (article-level) |
+| Submit article | `submit_article.go` | `POST /mobile/news/articles` | `NormalizeValue` + `ConfirmUpload` (article-level) |
+| Update article | `update_article.go` | `PUT /web/news/articles/{id}` | Compare old/new → `MarkDeleted` + `ConfirmUpload` (article-level, sekali) |
+| Add translation | `add_translation.go` | `PUT /web/news/articles/{id}/translations/{lang}` | Tidak ada lagi (author/thumbnail dihapus dari request) |
+| Delete article | `delete_article.go` | `DELETE /web/news/articles/{id}` | `MarkDeleted` sekali (`article.ThumbnailURL`) |
 
 ---
 

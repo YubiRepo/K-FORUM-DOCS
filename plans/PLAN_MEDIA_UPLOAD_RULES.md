@@ -63,12 +63,14 @@ Backend akan auto-confirm di usecase setelah entity tersimpan:
 thumbnailURL := normalizeKeyPtr(svc, req.ThumbnailURL)
 
 // 2. Simpan ke DB
-translation.ThumbnailURL = thumbnailURL
-repo.Save(ctx, translation)
+entity.ThumbnailURL = thumbnailURL
+repo.Save(ctx, entity)
 
 // 3. Confirm ke media_uploads (PENDING → CONFIRMED)
-confirmMediaKey(ctx, svc, translation.ThumbnailURL)
+confirmMediaKey(ctx, svc, entity.ThumbnailURL)
 ```
+
+> Contoh News: `thumbnail_url` disimpan di entity `Article` (article-level, satu per artikel), **bukan** di `ArticleTranslation` — lihat `NEWS_MEDIA_FLOWS.md`.
 
 > **WAJIB:** Confirm **hanya** dilakukan via payload bisnis. UI **tidak boleh** memanggil endpoint confirm terpisah. Endpoint `/confirm` tetap ada untuk backward compat dan debugging, tapi bukan flow utama.
 

@@ -63,6 +63,8 @@ List artikel dengan filter (semua status, untuk backoffice).
       "is_manual": false,
       "original_language": "id",
       "author_label": "Korean Association Indonesia",
+      "author": "Andi Pratama",
+      "thumbnail_url": "https://cdn.kai.app/news/thumb_001.jpg",
       "source": { "id": "src_detik", "name": "Detik.com" },
       "category": { "id": "cat_sport", "name": "Olahraga" },
       "scope": { "id": "scp_id", "name": "Berita Indonesia", "slug": "indonesia" },
@@ -104,6 +106,9 @@ Detail artikel + semua translations.
     "status": "published",
     "author_label": "Korean Association Indonesia",
     "author_region_id": null,
+    "author": "Andi Pratama",
+    "thumbnail_url": "https://cdn.kai.app/news/thumb_001.jpg",
+    "thumbnail_raw": "s3:/news/thumbnails/thumb_001.jpg",
     "is_featured": false,
     "view_count": 4820,
     "unique_view_count": 3110,
@@ -119,8 +124,6 @@ Detail artikel + semua translations.
         "title": "Timnas Indonesia Lolos ke Final",
         "content": "<p>...</p>",
         "summary": "...",
-        "author": "Andi Pratama",
-        "thumbnail_url": "https://cdn.kai.app/news/thumb_001.jpg",
         "tags": ["sepakbola", "timnas"],
         "is_original": true,
         "translate_status": null,
@@ -157,14 +160,14 @@ Buat artikel manual. Editor pilih bahasa utama + tulis konten.
   "original_language": "id",
   "author_label": "KAI Jakarta",
   "author_region_id": "region_jakarta",
+  "author": "Nama Penulis",
+  "thumbnail_url": "s3:/news/thumbnails/thumb.jpg",
   "is_featured": false,
   "status": "draft",
   "translation": {
     "title": "Judul Berita",
     "content": "<p>Isi berita...</p>",
     "summary": "Ringkasan singkat",
-    "author": "Nama Penulis",
-    "thumbnail_url": "s3:/news/thumbnails/thumb.jpg",
     "tags": ["tag1", "tag2"]
   }
 }
@@ -177,9 +180,11 @@ Buat artikel manual. Editor pilih bahasa utama + tulis konten.
 | `original_language` | `string` | Yes | Kode bahasa utama (mis. `id`) |
 | `author_label` | `string` | Yes | Label asal (mis. `KAI Jakarta`) |
 | `author_region_id` | `string` | No | null jika KAI Pusat |
+| `author` | `string` | No | Nama penulis asli artikel. Satu nilai per artikel, sama untuk semua bahasa hasil translate |
+| `thumbnail_url` | `string` | No | Thumbnail artikel. Format `s3:` (upload) atau `ext:` (URL eksternal). Satu nilai per artikel, sama untuk semua bahasa hasil translate |
 | `is_featured` | `bool` | No | Default false |
 | `status` | `string` | No | `draft` (default) atau `published` |
-| `translation` | `object` | Yes | Konten dalam bahasa utama |
+| `translation` | `object` | Yes | Konten dalam bahasa utama (title, content, summary, tags — tidak termasuk author/thumbnail_url) |
 
 **Response (201 Created)**:
 ```json
@@ -234,6 +239,7 @@ Tambah/edit translation manual untuk bahasa tertentu (override hasil AI).
 ```
 
 > Saat diisi manual, `translated_by=null`, `translate_status=done`, `is_original=false`.
+> `author` dan `thumbnail_url` tidak ada di endpoint ini — keduanya article-level, diubah lewat `PUT /articles/{article_id}` (endpoint 4).
 
 ---
 
@@ -323,12 +329,14 @@ Trigger generate translation manual ke bahasa tertentu (atau semua).
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `languages` | `string[]` | No | Bahasa target. Kosong = semua bahasa aktif |
-| `provider` | `string` | No | `google` (default) atau `openai` |
+| `provider` | `string` | No | `google` (default) atau `openai`. **Belum berfungsi** — diterima untuk kompatibilitas kontrak, tapi provider yang benar-benar dipakai worker masih fixed satu instance global (lihat `NEWS_RULES.md` §Provider Translate) |
 
 **Response (202 Accepted)**:
 ```json
 { "message": "Translation jobs enqueued", "data": { "enqueued": ["en", "ko"] } }
 ```
+
+> Bahasa yang belum pernah punya baris translation akan dibuat baru (status `pending`); bahasa yang sudah ada di-reset ke `pending` untuk diproses ulang. `translated_by` hasil akhirnya bisa `google`/`openai`/`noop` tergantung provider yang aktif di worker saat job diproses — lihat `NEWS_DB_SCHEMA.md` §Enum Values.
 
 ---
 

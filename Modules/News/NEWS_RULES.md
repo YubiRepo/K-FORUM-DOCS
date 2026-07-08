@@ -58,6 +58,8 @@ Entitas inti yang merepresentasikan satu artikel berita.
 | `status` | Status artikel: `draft`, `pending_approval`, `published`, `archived`, `rejected` |
 | `author_label` | Label asal yang tampil ke pembaca. Contoh: `Korean Association Indonesia`, `KAI Jakarta` |
 | `author_region_id` | FK region asal — kosong (null) jika dari KAI Pusat, terisi jika dari region tertentu |
+| `author` | Nama penulis asli artikel (hasil scraping atau diisi manual). Satu nilai per artikel, sama untuk semua bahasa hasil translate |
+| `thumbnail_url` | URL gambar thumbnail artikel. Satu nilai per artikel, sama untuk semua bahasa hasil translate |
 | `original_url` | URL asli artikel di sumbernya (hasil scraping). Dipakai untuk cek duplikat. Contoh: `https://detik.com/sport/12345`. Kosong jika manual |
 | `is_featured` | `true` = artikel di-pin/disorot di halaman utama |
 | `view_count` | Total berapa kali artikel dibuka (termasuk guest & buka berulang). Contoh: `1523` |
@@ -77,6 +79,8 @@ Entitas inti yang merepresentasikan satu artikel berita.
 
 Menyimpan konten artikel per bahasa. Satu artikel bisa punya banyak baris translation (satu per bahasa).
 
+> `author` dan `thumbnail_url` **bukan** bagian dari translation — keduanya disimpan sekali di level Article (lihat atribut `author`/`thumbnail_url` di atas) karena tidak berubah ketika artikel diterjemahkan.
+
 | Atribut | Keterangan & Contoh |
 |---|---|
 | `article_id` | FK ke `articles` |
@@ -84,12 +88,10 @@ Menyimpan konten artikel per bahasa. Satu artikel bisa punya banyak baris transl
 | `title` | Judul dalam bahasa ini |
 | `content` | Isi lengkap artikel dalam bahasa ini |
 | `summary` | Ringkasan singkat (excerpt) dalam bahasa ini |
-| `author` | Nama penulis (hasil scraping atau diisi manual) |
-| `thumbnail_url` | URL gambar thumbnail artikel |
 | `tags` | Daftar tag artikel. Contoh: `["sepakbola", "timnas", "piala dunia"]` |
 | `is_original` | `true` = konten asli (hasil scraping/ditulis editor). `false` = hasil terjemahan otomatis |
 | `translate_status` | Status proses terjemahan: `pending`, `processing`, `done`, `failed`. Hanya berlaku jika `is_original=false` |
-| `translated_by` | Mesin penerjemah yang dipakai: `google`, `openai`, atau kosong (null) jika diisi manual |
+| `translated_by` | Mesin penerjemah yang dipakai: `google`, `openai`, `noop` (pipeline otomatis jalan tapi provider AI asli belum di-plug in — isi = original, lihat catatan di bawah), atau kosong (null) jika diisi manual |
 
 ### 3. News Source
 
@@ -490,6 +492,8 @@ Cek article_translations WHERE language='en' AND translate_status='done'
 - **Google Translate API** — default (murah, cepat, support banyak bahasa)
 - **OpenAI** — alternatif untuk kualitas lebih natural (lebih mahal per token)
 - Field `translated_by` di `article_translations` menyimpan provider yang dipakai — traceable
+
+> **Status implementasi saat ini:** provider yang di-wire ke `TranslationRelay` (worker) masih `NoopTranslationProvider` — job tetap jalan lewat lifecycle `pending → processing → done`, tapi isi translation-nya sama persis dengan original (belum benar-benar diterjemahkan). Ditandai `translated_by=noop`. Google/OpenAI baru aktif kalau API key sudah tersedia dan provider asli di-plug in (lihat `plans/PLAN_NEWS_SCRAPER_ENGINE.md`). Field `provider` di request trigger-translate (`POST /articles/{id}/translate`) diterima untuk kompatibilitas kontrak, tapi belum berpengaruh — relay cuma pakai satu provider global yang di-set saat worker start, bukan per-request.
 
 ### Artikel Manual — Translation
 
