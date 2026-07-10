@@ -4,14 +4,33 @@
 - **Review date**: 10 Juli 2026 (device review: iPad Air 11-inch M3)
 - **Status dokumen**: living doc untuk resubmission berikutnya
 
-Apple menolak dengan **4 guideline**. Ringkasan status:
+Apple menolak dengan **4 guideline**. Ringkasan status (update 10 Jul 2026, sore):
 
 | # | Guideline | Kebutuhan | Mobile (Flutter) | Backend | Ops/ASC |
 |---|-----------|-----------|------------------|---------|---------|
-| 1 | 4.8 Login Services | Sign in with Apple | ✅ Selesai | ❌ Endpoint baru | Enable capability di App ID |
-| 2 | 1.2 UGC | Block user | ❌ Belum | ❌ Endpoint baru | Screen recording |
+| 1 | 4.8 Login Services | Sign in with Apple | ✅ Selesai | ❌ Endpoint baru | ✅ Capability + Key .p8 dibuat |
+| 2 | 1.2 UGC | EULA gate + report + block user | ✅ Selesai (gate + block + filter instan) | ❌ Endpoint block baru | Screen recording |
 | 3 | 2.1 Information Needed | Akun demo subscription expired | — | ❌ Siapkan akun | Isi App Review Information |
-| 4 | 5.1.1(v) Account Deletion | Hapus akun in-app | ✅ Selesai | ✅ Sudah ada | Screen recording |
+| 4 | 5.1.1(v) Account Deletion | Hapus akun in-app | ✅ Selesai | ❌ **Endpoint belum di-deploy** | Screen recording |
+
+### Status endpoint production — diverifikasi live 10 Jul 2026
+
+Dicek langsung ke `https://k-forum-api.yubicom.co.id/api/v1` dengan probe aman (input sengaja invalid; 404 di bawah = *route not found*, bukan validasi):
+
+| Endpoint | Status | Untuk |
+|---|---|---|
+| `GET /mobile/legal/pending` | ✅ live | EULA gate (1.2) |
+| `GET /mobile/legal/{doc_type}` | ✅ live | EULA gate (1.2) |
+| `POST /mobile/legal/{doc_type}/accept` | ✅ live | EULA gate (1.2) |
+| `POST /mobile/reports/content` (+reasons/mine) | ✅ live | Report konten (1.2) |
+| `POST /mobile/auth/login/apple` | ❌ 404 | Apple login (4.8) |
+| `POST /mobile/profile/account/delete-request` | ❌ 404 | Hapus akun (5.1.1) |
+| `POST /mobile/profile/account/confirm-delete` | ❌ 404 | Hapus akun (5.1.1) |
+| `POST /mobile/users/{id}/block` | ❌ 404 | Block user (1.2) |
+| `DELETE /mobile/users/{id}/block` | ❌ 404 (asumsi, satu paket) | Block user (1.2) |
+| `GET /mobile/users/me/blocked` | ❌ 404 | Block user (1.2) |
+
+**Kesimpulan: seluruh sisi mobile selesai; semua blocker resubmission ada di backend** (4 kelompok endpoint di atas + field `has_password`/`apple_id` di payload user + akun demo expired).
 
 ---
 
@@ -88,7 +107,7 @@ Kebijakan Apple (sejak Juni 2022): app dengan Sign in with Apple **wajib me-revo
 Reviewer minta spesifik: *"a mechanism for users to block abusive users (blocking should also notify the developer of the inappropriate content and should remove it from the user's feed instantly)"*.
 
 Yang **sudah ada** (tinggal didemokan di screen recording):
-- ✅ EULA/ToS sebelum login — flow `pending_acceptances` (terms, privacy, community guidelines) sudah jalan via `accept_legal_document_usecase`.
+- ✅ **EULA/ToS gate** — diimplementasikan 10 Jul 2026 (sebelumnya hanya plumbing backend, TIDAK ada UI-nya). Sekarang: (a) setelah login/register via metode apa pun, jika `GET /mobile/legal/pending` mengembalikan dokumen yang belum disetujui, router memaksa user ke layar `/accept-terms` (baca dokumen → checkbox → "Setuju & Lanjut" → `POST /legal/{doc}/accept` per dokumen); (b) register screen menampilkan pernyataan persetujuan + link Terms/Privacy. Backend endpoint sudah live di production (diverifikasi 10 Jul) — tidak ada kerja backend tambahan.
 - ✅ Report/flag konten — `showReportContentSheet` dipakai di 9 titik (post, komentar, event, dsb).
 
 Yang **belum ada** — Block User:
