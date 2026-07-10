@@ -147,7 +147,32 @@ Bergantung pada Fase 2 (kolom timezone) & Fase 3 (`port.SessionRevocationStore`)
 
 **Catatan implementasi:**
 - Endpoint `POST /user-settings/devices/logout-all` sekarang benar-benar **full enforcement instan** (bukan cuma kontrak API yang dipenuhi tapi efeknya parsial seperti yang ditoleransi spec) — berkat `SessionRevocationStore` dari Fase 3. Ini konkret menutup gap "dependency Auth belum siap" yang disebut spec asli.
-- Logout per-device untuk device **selain** device sekarang sengaja tetap partial (cuma nonaktifkan FCM row, tidak revoke session) — dibuktikan lewat test `LogoutDevice_OtherDevice_DoesNotRevokeSession` — karena `sessionID` tidak stabil per-device (di-mint ulang tiap refresh token), jadi tidak ada cara reliable untuk tahu session mana yang harus direvoke untuk device lain tanpa perubahan arsitektur lebih besar (di luar scope, sesuai draft).
+- ~~Logout per-device untuk device selain device sekarang sengaja tetap partial~~ — **superseded, lihat Fase 4b di bawah.** Awalnya didesain begitu karena `sessionID` tidak stabil per-device (di-mint ulang tiap refresh token). Ternyata bisa diperbaiki tanpa perubahan arsitektur besar — lihat Fase 4b.
+
+---
+
+## Fase 4b — Fix: Logout device lain sekarang benar2 revoke (bukan cuma stop push) ✅ SELESAI (2026-07-10)
+
+**Bug report dari user:** "logout satu device dari backoffice, tapi di device itu masih tetep bisa hit endpoint, gak unauthorized." Investigasi ulang menemukan batasan Fase 4 lebih longgar dari yang didokumentasikan — dokumen awal bilang "akses akhirnya putus saat refresh ditolak", tapi kenyataannya `RevokeAllBefore` (yang bikin refresh ditolak) **hanya dipanggil oleh Logout All**, bukan logout single-device. Jadi device lain yang di-logout satuan: push notif berhenti, TAPI access token tetap valid sampai expired alami, DAN refresh token-nya tidak pernah diblokir — bisa refresh terus tanpa batas.
+
+**Root cause:** `sessionID` di-mint ulang acak setiap login/refresh dan tidak pernah disimpan terkait ke device manapun, jadi backend tidak punya cara tahu sessionID mana yang harus direvoke untuk device selain device yang sedang request.
+
+**Fix:** tanam `device_id` (device_id yang sama dipakai saat register FCM) ke JWT access & refresh token sejak **login**, lalu pakai itu sebagai kunci revocation baru yang device-scoped — mirip pola `RevokeAllBefore`/`RevokedBefore` dari Fase 3, tapi di-scope ke `userID+deviceID` bukan cuma `userID`.
+
+- Port: `internal/app/port/token_generator.go` (`TokenClaims.DeviceID`, `RefreshTokenClaims.DeviceID`; `GenerateAccessToken`/`GenerateRefreshToken` terima parameter `deviceID` baru), `internal/app/port/session_revocation.go` (`RevokeDeviceBefore`, `DeviceRevokedBefore` — key Redis `device:revoked_before:<userID>:<deviceID>`)
+- Infra: `internal/infrastructure/external/jwt/token_generator.go` (claim `did` baru di access & refresh token), `internal/infrastructure/cache/redis_session_revocation.go` (impl key device-scoped)
+- Middleware: `internal/interfaces/http/middleware/auth.go` (`JWTAuth` cek `DeviceRevokedBefore` kalau `claims.DeviceID != ""`; juga expose `c.Set("device_id", ...)`)
+- Usecase: `internal/app/usecase/auth/refresh_token.go` (cek device-scoped revocation juga, dan **carry-forward** `claims.DeviceID` ke token baru — client tidak perlu resend device_id tiap refresh, cukup sekali saat login), `login.go`/`google_login.go` (kirim `req.DeviceID` ke `GenerateAccessToken`/`GenerateRefreshToken`), `verify_seamless_token.go` (deviceID="" — seamless handoff tidak punya device context, fallback aman ke perilaku lama)
+- DTO: `internal/app/dto/auth_dto.go` (`LoginRequest.DeviceID`, `GoogleLoginRequest.DeviceID` — keduanya opsional, `omitempty`; tidak breaking untuk client lama yang belum kirim)
+- Usecase: `internal/app/usecase/usersettings/logout_device.go` (cabang "device lain" sekarang panggil `RevokeDeviceBefore(userID, dr.DeviceID, now, refreshTokenTTL)` — merevoke access DAN refresh device itu sekaligus, bukan cuma nonaktifkan FCM)
+- Test: `internal/interfaces/http/handler/mobile/user_settings_devices_handler_test.go` (`TestMobileUserSettingsDevices_LogoutDevice_OtherDevice_RevokesThatDevicesAccessAndRefresh` — 2 device login terpisah dengan `device_id` masing-masing via helper baru `mustLoginWithDevice`, buktikan device yang di-logout dari device lain langsung 401 di access DAN refresh, device yang melakukan logout tidak terpengaruh)
+- Frontend (`k-forum-backoffice`): `app/stores/auth.ts` — `login()` & `loginWithGoogle()` sekarang kirim `device_id: useFcmStore().getDeviceId()` supaya sesi backoffice juga ikut terikat device_id (tanpa ini, fix di atas tidak berlaku untuk sesi yang login dari backoffice lama).
+
+**Batasan yang MASIH ada (jujur, bukan disembunyikan):** fix ini hanya berlaku kalau device yang di-logout **login dengan mengirim `device_id`** — client lama (mobile app version lama, atau sesi yang sudah login sebelum fix ini deploy) tidak punya `did` di token-nya, sehingga device-scoped revocation tidak berlaku untuknya; efeknya balik ke perilaku lama (cuma stop push, akses jalan sampai token lama itu expired). **Mobile app Flutter (`k_forum`) belum disentuh di sesi ini** — perlu ditambahkan `device_id` di payload login/google-login-nya juga (pola sama seperti fix di `k-forum-backoffice`) supaya device mobile ikut terlindungi penuh, bukan cuma sesi backoffice.
+
+**Diverifikasi end-to-end via Playwright** (2 browser context terisolasi = 2 "device" beda, device_id beda-beda dari localStorage masing-masing): login device A & B, device A register FCM, dari UI device B klik "Logout" di row device A → toast "Device logged out" → device A langsung 401 di endpoint manapun, device B tetap valid.
+
+**Catatan operasional:** backend dev yang jalan di `localhost:8888` (proses `air`, root-owned) sempat ketahuan **stale** — binary belum rebuild sejak commit lama, tidak reflect perubahan Fase 4b (dan mungkin perubahan lain di sesi ini). Verifikasi E2E akhirnya dilakukan dengan menjalankan instance backend terpisah (`go run ./cmd/app` di port 8889, pakai Postgres/Redis/RabbitMQ dev yang sama via port yang di-expose). **Perlu restart proses `air` di 8888 supaya dev server utama benar-benar pakai kode terbaru.**
 
 - **Identifikasi "current device"**: `GET /user-settings/devices?device_id=xxx` — query param opsional, client kirim `device_id` yang sama dipakai saat register FCM (keputusan yang sudah dikonfirmasi; tidak perlu header/middleware baru). Kalau tidak dikirim, semua `is_current=false`.
 - Usecase baru di package `usersettings` (BUKAN reuse usecase `device` package — inject `notificationrepo.DeviceRegistrationRepository` langsung, pola cross-context yang sudah dipakai `news` untuk `SystemLanguageRepository`):
@@ -160,11 +185,23 @@ Bergantung pada Fase 2 (kolom timezone) & Fase 3 (`port.SessionRevocationStore`)
 
 ---
 
-## Fase 5 — User Settings: Linked Accounts (Google)
+## Fase 5 — User Settings: Linked Accounts (Google) ✅ SELESAI (2026-07-10)
 
 **Endpoint:** `GET /user-settings/linked-accounts`, `DELETE /user-settings/linked-accounts/google` (spec #7, #8)
 
 Menyentuh domain Auth (`internal/domain/user`) — Google bukan field scalar, dimodelkan sebagai `Credential{Type: GOOGLE}` + `LoginIdentity{Kind: GOOGLE}` di aggregate `User`.
+
+**Status:** Implementasi selesai persis sesuai draft (tidak ada gap baru), `go build ./...` + `go vet ./...` bersih, 6 test baru pass + full suite `mobile`/`web` handler tetap hijau. File yang dibuat/diubah:
+
+- Domain: `internal/domain/user/constant/user_constant.go` (`CodeUserGoogleUnlinkRequiresPassword` **+ satu tambahan di luar draft**: `CodeUserGoogleNotLinked`, untuk kasus defensif unlink dipanggil saat Google memang belum tertaut — draft tidak menyebutkan case ini secara eksplisit), `internal/domain/user/entity/user.go` (`HasLocalPassword()`, `UnlinkGoogleCredential()`)
+- Usecase: `internal/app/usecase/auth/change_password_local.go` (factor-out ke `HasLocalPassword()` sesuai draft), `internal/app/usecase/usersettings/{get_linked_accounts,unlink_google}.go` (baru) + `dependencies.go` (`UserRepo`) + `helpers.go` (`mapUserSettingsAuthError`)
+- DTO: `internal/app/dto/user_settings_dto.go` (`GoogleLinkedAccount`, `LinkedAccountsResponse`)
+- Handler: `internal/interfaces/http/handler/mobile/user_settings_handler.go` (`GetLinkedAccounts`, `UnlinkGoogle`)
+- Router: `internal/interfaces/http/router/router.go` (`protected.Group("/user-settings/linked-accounts")`)
+- Wiring: `cmd/app/main.go`, `internal/testhelper/testserver.go` (thread `userRepo` ke `usersettingsUsecase.Dependencies`, route baru di `buildRouter`)
+- Test: `internal/interfaces/http/handler/mobile/user_settings_linked_accounts_handler_test.go` (baru — 6 skenario, termasuk helper `mustLinkGoogle`/`mustClearLocalPassword` yang insert langsung ke tabel `credentials`/`user_identities` via SQL karena `noopGoogleVerifier` di test environment selalu error, jadi flow Google login asli tidak bisa dipakai untuk setup test)
+
+**Catatan implementasi penting (soft-delete in-place, bukan hapus dari slice):** `PostgresUserRepository.persistCredentials`/`persistLoginIdentitiesForCredential` hanya **UPSERT** setiap item yang masih ada di `user.Credentials`/`cred.LoginIdentities` slice — kalau item dihapus dari slice, repository tidak pernah tahu harus menghapus/menandai baris itu di DB (tidak ada logic "DELETE yang hilang dari slice"). Jadi `UnlinkGoogleCredential()` **tidak** menghapus credential/identity dari slice, melainkan set `DeletedAt` in-place sambil tetap membiarkannya di slice — supaya `Update()` benar-benar menulis `deleted_at` ke DB. Konsekuensinya: `FindCredential(GOOGLE)` (method yang sudah ada, dipakai di banyak tempat lain) **tidak** memfilter `DeletedAt` — jadi `GetLinkedAccountsUseCase` sengaja cek `google.DeletedAt == nil` secara eksplisit sendiri, bukan mengandalkan `FindCredential` untuk itu (tidak menyentuh/mengubah perilaku `FindCredential` yang sudah ada, biar tidak berisiko ke caller lain).
 
 - `internal/domain/user/entity/user.go`: tambah method `HasLocalPassword() bool` (factor-out dari cek yang sudah ada di `change_password_local.go:67-70` — `FindCredential(LOCAL)` + `SecretHash != nil`) dan `UnlinkGoogleCredential() error` (hapus/soft-delete credential+identity GOOGLE dari aggregate; guard: return domain error kalau `!HasLocalPassword()`).
 - `internal/domain/user/constant/user_constant.go`: tambah `CodeUserGoogleUnlinkRequiresPassword`.
@@ -177,9 +214,19 @@ Menyentuh domain Auth (`internal/domain/user`) — Google bukan field scalar, di
 
 ---
 
-## Fase 6 — User Settings: Landing Aggregator
+## Fase 6 — User Settings: Landing Aggregator ✅ SELESAI (2026-07-10)
 
 **Endpoint:** `GET /user-settings` (spec #1) — **harus terakhir**, karena menggabungkan hasil Fase 1 + 4 + 5.
+
+**Status:** Implementasi selesai persis sesuai draft, `go build ./...` + `go vet ./...` bersih, 2 test baru pass (assert ketiga section muncul + is_current ikut kebawa) + full suite `mobile`/`web` handler tetap hijau. **Ini menandai seluruh endpoint inti `API_SPEC_USER_SETTINGS.md` (#1–#8) sudah terimplementasi.** File yang dibuat/diubah:
+
+- Usecase: `internal/app/usecase/usersettings/get_landing.go` (baru — compose `GetPreferencesUseCase`+`ListDevicesUseCase`+`GetLinkedAccountsUseCase` in-process) + `dependencies.go` (`GetLanding` field, dikonstruksi dari instance sibling yang sama, bukan instance baru — supaya tidak ada duplikasi logic)
+- DTO: `internal/app/dto/user_settings_dto.go` (`LandingResponse`)
+- Handler: `internal/interfaces/http/handler/mobile/user_settings_handler.go` (`GetLanding`)
+- Router: `internal/interfaces/http/router/router.go`, `internal/testhelper/testserver.go` (`userSettings.GET("", ...)` — path kosong di dalam grup `/user-settings` yang sudah ada, jadi persis `/api/v1/user-settings`)
+- Test: `internal/interfaces/http/handler/mobile/user_settings_landing_handler_test.go` (baru — reuse helper `mustLinkGoogle`/`mustRegisterDeviceWithDeviceID` dari Fase 4/5)
+
+**Catatan implementasi:** `app_preferences` di response landing tetap menyertakan `available_languages` (field yang sama dipakai `GET /user-settings/preferences` biasa) karena `GetLandingUseCase` reuse `GetPreferencesUseCase` apa adanya — sedikit lebih dari contoh minimal di dokumen spec, tapi field tambahan yang harmless dan menghindari duplikasi logic mapping preferences.
 
 - Usecase `get_landing.go` di package `usersettings` — compose langsung 3 usecase sibling (`GetPreferencesUseCase`, `ListDevicesUseCase`, `GetLinkedAccountsUseCase`) in-process, tanpa HTTP round-trip.
 - Terima `device_id` query param opsional juga (untuk `is_current` di list device ringkas).

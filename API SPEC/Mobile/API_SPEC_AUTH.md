@@ -70,9 +70,15 @@ Melakukan autentikasi menggunakan email /username dan password.
   ```json
   {
     "identifier": "user@example.com",
-    "password": "userpassword"
+    "password": "userpassword",
+    "device_id": "device_id_yang_sama_dipakai_saat_fcm_register"
   }
   ```
+- **`device_id`** (opsional, tapi **wajib dikirim** kalau app juga punya fitur "kelola device / logout device lain"):
+  - Harus sama persis dengan `device_id` yang dikirim ke `POST /fcm/register` — **jangan generate device_id baru khusus untuk login**, reuse getter/nilai yang sama.
+  - Kalau dikirim, backend menanamkannya ke `access_token` & `refresh_token` (klaim `did`). Ini yang memungkinkan endpoint "logout device tertentu" (`DELETE /api/v1/user-settings/devices/{id}`) benar-benar mencabut akses device itu — tanpa `device_id` di login, logout device lain cuma menghentikan push notification, token device itu tetap valid sampai expired sendiri.
+  - Kalau app belum sempat generate `device_id` (mis. proses FCM belum jalan), `device_id` boleh di-generate lebih dulu secara independen dari FCM init supaya sudah tersedia sebelum login dipanggil — jangan menunggu FCM registration selesai duluan.
+  - **Tidak perlu dikirim ulang saat refresh token** — backend otomatis membawanya (carry-forward) dari refresh token lama ke token baru.
 - **Response (Success 200/201)**:
   ```json
   {
@@ -105,9 +111,11 @@ Unified Auth Flow untuk login atau registrasi secara otomatis menggunakan ID Tok
   ```json
   {
     "id_token": "google_id_token_jwt_string",
-    "access_token": "optional_google_access_token_string"
+    "access_token": "optional_google_access_token_string",
+    "device_id": "device_id_yang_sama_dipakai_saat_fcm_register"
   }
   ```
+- **`device_id`**: sama aturannya seperti pada endpoint Login biasa (#1 di atas) — opsional, tapi harus sama dengan device_id FCM kalau dikirim.
 - **Response (Success 200/201)**:
   - Jika email Google belum terdaftar ➡️ Registrasi akun secara otomatis dan kembalikan response token + user.
   - Jika email Google sudah terdaftar ➡️ Login dan kembalikan response token + user.
@@ -174,24 +182,34 @@ Melakukan registrasi akun baru dengan kredensial biasa.
 ---
 
 ### 4. Logout
-Mengakhiri session token JWT aktif.
+Mengakhiri session token JWT aktif (device/session ini saja — bukan semua device).
 
-- **URL**: `POST /api/v1/mobile/auth/logout`
+> [!IMPORTANT]
+> **Koreksi URL**: endpoint ini **bukan** `/api/v1/mobile/auth/logout` — itu tidak pernah ada di backend. URL yang benar & sudah live adalah **universal** (tanpa prefix `/mobile`, dipakai bersama oleh mobile & backoffice):
+
+- **URL**: `POST /api/v1/auth/logout`
 - **Autentikasi**: Ya (`Bearer <access_token>`)
 - **Request Body**: None (Menggunakan Authorization Header)
+- **`device_id`**: **tidak perlu dikirim.** Backend membaca `session_id` langsung dari klaim token (`sid`) yang ada di `Authorization` header — cukup itu untuk merevoke session ini. Efeknya instan: access token yang dipakai untuk request ini langsung invalid di request berikutnya.
 - **Response (Success 200)**:
   ```json
   {
-    "message": "Logout successful"
+    "message": "Logout berhasil"
   }
   ```
+
+> [!NOTE]
+> **Terkait**: "logout device lain" (lihat device sendiri di daftar, cabut akses device tertentu selain device ini, atau logout semua device sekaligus) **bukan** endpoint di modul Auth ini — itu ada di modul **User Settings** (`GET/DELETE /api/v1/user-settings/devices`, `POST /api/v1/user-settings/devices/logout-all`), lihat `K-FORUM-DOCS/Modules/Users Settings/API_SPEC_USER_SETTINGS.md`. Endpoint-endpoint itu **butuh** `device_id` (query param) untuk tahu device mana yang sedang request, dan **hanya bisa mencabut akses device lain secara instan kalau device tersebut login dengan mengirim `device_id`** (lihat catatan di endpoint Login #1 di atas) — device yang login tanpa `device_id` tetap bisa dicabut lewat "logout semua device", tapi tidak lewat "logout satu device tertentu".
 
 ---
 
 ### 5. Refresh Token
 Mendapatkan Access Token baru menggunakan Refresh Token.
 
-- **URL**: `POST /api/v1/mobile/auth/refresh`
+> [!IMPORTANT]
+> **Koreksi URL**: path yang benar & sudah live adalah `/refresh-token`, bukan `/refresh`.
+
+- **URL**: `POST /api/v1/mobile/auth/refresh-token`
 - **Autentikasi**: Tidak (Menggunakan payload refresh token)
 - **Request Body**:
   ```json
@@ -199,6 +217,7 @@ Mendapatkan Access Token baru menggunakan Refresh Token.
     "refresh_token": "refresh_token_jwt_string"
   }
   ```
+- **`device_id`**: **tidak perlu dikirim di sini.** Kalau `device_id` sudah pernah dikirim saat login (lihat #1), backend otomatis membawanya (carry-forward) dari refresh token lama ke access & refresh token yang baru — device tetap "dikenali" tanpa perlu resend apa pun.
 - **Response (Success 200/201)**:
   ```json
   {
