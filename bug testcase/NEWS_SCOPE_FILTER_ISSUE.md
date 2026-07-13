@@ -1,10 +1,10 @@
-# Issue: Filter `scope` di News tidak berfungsi (backend)
+# Issue: News API — filter `scope` & status `is_bookmarked` (backend)
 
-- **Modul**: News — `GET /api/v1/mobile/news/articles`
+- **Modul**: News — `GET /api/v1/mobile/news/articles` (+ `POST|DELETE .../bookmark`)
 - **Severity**: High — fitur utama layar News (portal section per scope) bergantung pada filter ini
-- **Status**: 🔴 Open — menunggu fix backend
+- **Status**: 🔴 Open — menunggu fix backend (2 issue di dokumen ini)
 - **Ditemukan**: 13 Jul 2026, diverifikasi live di production (`k-forum-api.yubicom.co.id`)
-- **Pelapor**: Mobile team (via QA visual — artikel yang sama muncul di section scope berbeda)
+- **Pelapor**: Mobile team (via QA visual — artikel yang sama muncul di section scope berbeda; ikon bookmark tidak menyala padahal sudah di-bookmark)
 
 ---
 
@@ -60,7 +60,49 @@ Temuan tambahan:
 - [ ] Keputusan artikel null-scope terdokumentasi di `API_SPEC_NEWS_MOBILE.md`.
 - [ ] Mobile menghapus workaround `_onlyScope` + over-fetch di `lib/features/news/presentation/screens/news_screen.dart` (ditandai komentar `WORKAROUND (13 Jul 2026)`).
 
+---
+
+# Issue 2: `is_bookmarked` hilang dari response LIST artikel
+
+## Ringkasan
+
+Ikon bookmark di daftar berita selalu tampil "belum di-bookmark" walaupun artikelnya sudah di-bookmark. Penyebab: **endpoint list tidak pernah mengirim `is_bookmarked`**, padahal `is_liked` dikirim.
+
+## Bukti reproduksi (curl, prod, 13 Jul 2026)
+
+```bash
+POST /mobile/news/articles/{id}/bookmark      # → 200, tapi body: { "data": null }
+GET  /mobile/news/articles?limit=5            # → item TIDAK punya field is_bookmarked
+                                              #   (is_liked ADA — inkonsisten)
+GET  /mobile/news/articles/{id}               # → detail: is_bookmarked: true ✅
+GET  /mobile/news/bookmarks                   # → artikel tsb ada di daftar ✅
+```
+
+Jadi bookmark **tersimpan benar** di server; hanya response list yang tidak melaporkannya.
+
+## Kendala yang ditimbulkan
+
+1. Setiap kali list dimuat/di-refresh, semua artikel tampil "belum di-bookmark" — user mengira bookmark-nya hilang, atau malah men-tap lagi dan **tanpa sadar meng-unbookmark**.
+2. `POST|DELETE /bookmark` membalas `data: null` (tanpa `is_bookmarked` baru). Mobile kini fallback ke state yang diminta, tapi server-reported state selalu lebih aman (mis. kalau request idempotent/konflik).
+
+## Yang diminta ke backend
+
+1. **Sertakan `is_bookmarked` di setiap item response LIST** `GET /mobile/news/articles` (dan `GET /mobile/news/bookmarks`), konsisten dengan `is_liked`.
+2. (Nice to have) balas `POST|DELETE /bookmark` dengan `data: { "article_id": "...", "is_bookmarked": true|false }` seperti kontrak di spec — mobile sudah siap membacanya.
+
+## Kriteria selesai (acceptance)
+
+- [ ] Item list membawa `is_bookmarked` yang akurat per user.
+- [ ] Ikon bookmark di list app menyala untuk artikel yang sudah di-bookmark, dan tetap menyala setelah pull-to-refresh.
+
+## Catatan mobile (sudah dikerjakan, 13 Jul 2026)
+
+- Bug ikon "balik sendiri sedetik setelah tap" sudah diperbaiki di app: mapper kini mentolerir `data: null` dan screen mempertahankan state yang diminta (`news_results.dart`, `news_models.dart`, `news_screen.dart`, `news_detail_screen.dart`).
+- Yang TIDAK bisa diperbaiki dari app: status bookmark setelah reload list — butuh field dari server (issue di atas).
+
+---
+
 ## Referensi
 
 - Spec: `docs/api_spec/API_SPEC_NEWS_MOBILE.md` (bagian query parameters — ada callout warning yang menunjuk ke issue ini)
-- Workaround mobile: `lib/features/news/presentation/screens/news_screen.dart` → `_onlyScope`, `_loadSections`, `_load`, `_loadMore`
+- Workaround mobile (scope): `lib/features/news/presentation/screens/news_screen.dart` → `_onlyScope`, `_loadSections`, `_load`, `_loadMore`
