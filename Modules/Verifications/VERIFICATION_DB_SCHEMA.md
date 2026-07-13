@@ -1,6 +1,6 @@
 # Verification Badge Module — Database Schema (v1.0)
 
-Database schema untuk **Verification Badge** module KAI App. Badge keaslian (centang) buat **User** & **Merchant**, diajukan manual, di-review Superadmin. Konsisten dengan konvensi project: `UUID` PK (`gen_random_uuid()`), `TIMESTAMPTZ`, append-only audit, rules-as-data config, resolve-live + cache.
+Database schema untuk **Verification Badge** module KAI App. Badge keaslian (centang) buat **User**, **Merchant**, & **Community**, diajukan manual, di-review Superadmin. Konsisten dengan konvensi project: `UUID` PK (`gen_random_uuid()`), `TIMESTAMPTZ`, append-only audit, rules-as-data config, resolve-live + cache.
 
 ---
 
@@ -25,6 +25,11 @@ users (modul auth)
 
 merchants (modul directory)
   ├── verifications (polymorphic: entity_type='merchant', entity_id=merchants.id)
+  └── is_verified (cache column, ALTER)
+
+communities (modul community)
+  ├── verifications (polymorphic: entity_type='community', entity_id=communities.id)
+  │     └── diajukan oleh Leader/owner komunitas
   └── is_verified (cache column, ALTER)
 
 verifications (1) ──< verification_events (N)   ← audit append-only
@@ -55,8 +60,8 @@ verification_requirements (config, per entity_type)
 -- ============================================================================
 CREATE TABLE verifications (
     id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    entity_type       VARCHAR(20) NOT NULL,          -- 'user' | 'merchant' (= badge type)
-    entity_id         UUID NOT NULL,                 -- users.id | merchants.id (polymorphic, no FK)
+    entity_type       VARCHAR(20) NOT NULL,          -- 'user' | 'merchant' | 'community' (= badge type)
+    entity_id         UUID NOT NULL,                 -- users.id | merchants.id | communities.id (polymorphic, no FK)
     status            VARCHAR(20) NOT NULL DEFAULT 'pending', -- 'pending'|'approved'|'rejected'|'revoked'
 
     -- Pengajuan
@@ -77,7 +82,7 @@ CREATE TABLE verifications (
     created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT chk_verif_entity_type CHECK (entity_type IN ('user','merchant')),
+    CONSTRAINT chk_verif_entity_type CHECK (entity_type IN ('user','merchant','community')),
     CONSTRAINT chk_verif_status      CHECK (status IN ('pending','approved','rejected','revoked'))
 );
 
@@ -133,7 +138,7 @@ CREATE TABLE verification_requirements (
     created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT chk_verif_req_entity CHECK (entity_type IN ('user','merchant')),
+    CONSTRAINT chk_verif_req_entity CHECK (entity_type IN ('user','merchant','community')),
     CONSTRAINT chk_verif_req_mode   CHECK (match_mode IN ('any_of','all_of'))
 );
 
@@ -141,12 +146,24 @@ CREATE TABLE verification_requirements (
 -- ============================================================================
 -- 5. ALTER: cache is_verified (additive, non-breaking)
 -- ============================================================================
-ALTER TABLE users     ADD COLUMN is_verified BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE merchants ADD COLUMN is_verified BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users       ADD COLUMN is_verified BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE merchants   ADD COLUMN is_verified BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE communities ADD COLUMN is_verified BOOLEAN NOT NULL DEFAULT FALSE;
 
-CREATE INDEX idx_users_is_verified     ON users (is_verified)     WHERE is_verified = TRUE;
-CREATE INDEX idx_merchants_is_verified ON merchants (is_verified) WHERE is_verified = TRUE;
+CREATE INDEX idx_users_is_verified       ON users (is_verified)       WHERE is_verified = TRUE;
+CREATE INDEX idx_merchants_is_verified   ON merchants (is_verified)   WHERE is_verified = TRUE;
+CREATE INDEX idx_communities_is_verified ON communities (is_verified) WHERE is_verified = TRUE;
 ```
+
+> **⚠️ IMPACT — 3 tabel eksternal dapat kolom baru `is_verified`.** Ini penanda apakah entity terverifikasi, di-maintain modul Verification (bukan dimiliki tabel aslinya). Migrasi **additive & non-breaking** (default `FALSE`, existing rows aman).
+
+| Tabel | Modul pemilik | Kolom baru | Arti |
+|-------|---------------|------------|------|
+| `users` | User Management | `is_verified BOOLEAN DEFAULT FALSE` | User punya badge "Verified Member" |
+| `merchants` | Directory | `is_verified BOOLEAN DEFAULT FALSE` | Merchant punya badge "Verified Merchant" |
+| `communities` | Community | `is_verified BOOLEAN DEFAULT FALSE` | Komunitas punya badge "Verified Community" |
+
+> **Catatan penting:** kolom `is_verified` cuma **cache** buat query listing cepet. Sumber kebenaran tetap ada row `verifications` `status='approved'`. Modul Verification yang set/unset kolom ini (saat approve → `TRUE`, revoke → `FALSE`) dalam transaksi atomik. Modul lain **read-only** terhadap kolom ini — jangan diubah dari luar.
 
 ---
 
@@ -197,6 +214,7 @@ type VerificationRequirement struct {
 const (
     VerifEntityUser     = "user"
     VerifEntityMerchant = "merchant"
+    VerifEntityCommunity = "community"
 
     VerifStatusPending  = "pending"
     VerifStatusApproved = "approved"
@@ -236,6 +254,15 @@ INSERT INTO verification_requirements (entity_type, match_mode, min_documents, a
   {"key":"address_proof",   "label":"Bukti alamat usaha",        "required":false, "sensitive":false},
   {"key":"business_social", "label":"Akun sosmed bisnis",        "required":false, "sensitive":false}
 ]');
+
+-- COMMUNITY: any_of, minimal 1 bukti legitimasi organisasi. Diajukan Leader.
+INSERT INTO verification_requirements (entity_type, match_mode, min_documents, accepted_docs) VALUES
+('community', 'any_of', 1, '[
+  {"key":"org_deed",        "label":"Akta / SK organisasi",          "required":false, "sensitive":true},
+  {"key":"kai_affiliation", "label":"Bukti afiliasi / partner KAI",  "required":false, "sensitive":false},
+  {"key":"community_social","label":"Akun sosmed resmi komunitas",   "required":false, "sensitive":false},
+  {"key":"officer_letter",  "label":"Surat keterangan pengurus",     "required":false, "sensitive":true}
+]');
 ```
 
 ---
@@ -245,7 +272,7 @@ INSERT INTO verification_requirements (entity_type, match_mode, min_documents, a
 - **Maintain cache `is_verified`:** di app-layer, dalam transaksi yang sama saat set `status='approved'` (→ TRUE) atau `status='revoked'` (→ FALSE). Bisa juga trigger, tapi app-layer lebih eksplisit & konsisten dengan modul lain.
 - **Validasi dokumen:** saat submit, baca `verification_requirements` by `entity_type`. `any_of` → cek jumlah dokumen ≥ `min_documents`. `all_of` → cek semua yang `required=true` ada.
 - **Dokumen sensitif** (`sensitive=true`): simpan di storage private, URL signed & short-lived, akses cuma Superadmin. Jangan pernah expose ke response member-facing.
-- **Guard prasyarat:** sebelum insert, cek `users.status='active'` (user) atau `merchants.status='published'` (merchant).
+- **Guard prasyarat:** sebelum insert, cek `users.status='active'` (user), `merchants.status='published'` (merchant), atau `communities.status='active'` (community). Khusus community: requester **wajib** Leader/owner komunitas itu (cek `user_roles` scope community + permission `verification.request_community`).
 
 ---
 

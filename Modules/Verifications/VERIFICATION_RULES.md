@@ -1,6 +1,6 @@
 # KAI Verification Badge Module — Rules & Use Cases (v1.0)
 
-Dokumentasi sistem rules **Verification Badge** (centang keaslian) KAI App. Modul ini ngasih badge "Verified" ke **User** dan **Merchant** yang keasliannya udah diverifikasi manual oleh Superadmin. Ini **layer trust terpisah** — bukan konfirmasi kontak, bukan gate publish, bukan ID Card.
+Dokumentasi sistem rules **Verification Badge** (centang keaslian) KAI App. Modul ini ngasih badge "Verified" ke **User**, **Merchant**, dan **Community** yang keasliannya udah diverifikasi manual oleh Superadmin. Ini **layer trust terpisah** — bukan konfirmasi kontak, bukan gate publish, bukan ID Card.
 
 > **Prinsip inti:** verifikasi = pernyataan keaslian yang di-grant selektif oleh KAI Pusat. Diajukan manual, di-review manual, bisa dicabut. Semua riwayat append-only buat audit. Status badge di-resolve live dari record verifikasi terbaru, bukan snapshot yang gampang basi.
 
@@ -37,21 +37,25 @@ Dokumentasi sistem rules **Verification Badge** (centang keaslian) KAI App. Modu
 
 ## 2. ENTITY TYPES & BADGE
 
-Dua tipe, satu mekanisme:
+Tiga tipe, satu mekanisme:
 
-| `type` | Target | Label Badge | Contoh Kasus |
-|--------|--------|-------------|--------------|
-| `user` | akun member | "Verified Member" / centang biru | Tokoh publik, influencer diaspora, pengurus KAI, figur komunitas |
-| `merchant` | listing bisnis di Directory | "Verified Merchant" / centang bisnis | Bisnis resmi, brand official, partner KAI |
+| `type` | Target | Diajukan oleh | Label Badge | Contoh Kasus |
+|--------|--------|---------------|-------------|--------------|
+| `user` | akun member | member itu sendiri | "Verified Member" / centang biru | Tokoh publik, influencer diaspora, pengurus KAI, figur komunitas |
+| `merchant` | listing bisnis di Directory | owner merchant | "Verified Merchant" / centang bisnis | Bisnis resmi, brand official, partner KAI |
+| `community` | komunitas di modul Community | **Leader / owner** komunitas | "Verified Community" / centang komunitas | Komunitas resmi, chapter organisasi, komunitas partner KAI |
 
+> **Ketiganya di-approve Superadmin** (global trust). Bedanya cuma **siapa yang ngajuin** — buat community, requester-nya Leader/owner komunitas (makanya sering disebut "diverifikasi lewat Leader", tapi keputusan tetep di Superadmin).
+>
 > Badge-nya **beda secara visual & makna**. Frontend bedain dari field `type`, bukan dari warna badge yang di-hardcode.
 
 ### Syarat entitas boleh diajukan
 
-| `type` | Prasyarat |
-|--------|-----------|
-| `user` | Akun `status = active`. Ga lagi suspended/banned. |
-| `merchant` | Merchant `approval_status = approved` **dan** `status = published`. Merchant draft/pending/rejected/banned **ga bisa** diajukan. |
+| `type` | Prasyarat | Siapa yang boleh ngajuin |
+|--------|-----------|--------------------------|
+| `user` | Akun `status = active`. Ga lagi suspended/banned. | User ybs |
+| `merchant` | Merchant `approval_status = approved` **dan** `status = published`. Merchant draft/pending/rejected/banned **ga bisa** diajukan. | Owner merchant |
+| `community` | Komunitas `status = active`. Ga lagi archived/suspended. | Leader/owner komunitas itu (butuh permission community, lihat §5) |
 
 ---
 
@@ -61,6 +65,7 @@ Syarat dokumen per tipe **disimpan sebagai config** (`verification_requirements`
 
 - **User → `any_of` (fleksibel):** cukup lampirin **minimal 1** dokumen pendukung dari daftar yang diterima. **KTP TIDAK wajib** — banyak diaspora ga punya KTP Indonesia, dan trust badge komunitas ga perlu KYC pemerintah. Superadmin tetep yang nilai layak/enggak.
 - **Merchant → `all_of` (lebih ketat):** dokumen legalitas usaha wajib, karena taruhannya lebih tinggi (transaksi/bisnis).
+- **Community → `any_of` (fleksibel):** cukup **minimal 1** bukti legitimasi organisasi. Leader yang ngajuin atas nama komunitasnya.
 
 Contoh default Phase 1:
 
@@ -68,6 +73,7 @@ Contoh default Phase 1:
 |--------|-------|------------------|---------|
 | `user` | `any_of` (min 1) | KTA KAI (kartu anggota), KTA organisasi lain, kartu identitas lain (KTP/Paspor/SIM — **opsional**, bukan wajib), bukti jabatan/keanggotaan, link sosial media terverifikasi | Selfie/foto pemegang bersifat opsional, diminta Superadmin kalo perlu klarifikasi |
 | `merchant` | `all_of` | NIB / akta perusahaan / izin usaha, foto identitas pemilik | Opsional: bukti alamat usaha, akun sosmed bisnis |
+| `community` | `any_of` (min 1) | Akta/SK organisasi, bukti afiliasi/partner KAI, akun sosmed resmi komunitas, surat keterangan pengurus | Diajukan Leader; Superadmin verifikasi legitimasi komunitas |
 
 > **KTA nyambung ke modul ID Card:** kartu anggota KAI yang udah ada bisa langsung dipakai sebagai bukti pendukung user. (Follow-up: pertimbangkan auto-attach data ID Card ke request user di Phase 2 — hook aja dulu.)
 
@@ -122,7 +128,7 @@ Contoh default Phase 1:
 
 ## 5. ACTOR & PERMISSION MATRIX
 
-| Action | Pemilik (User/Merchant owner) | Admin Regional | Superadmin |
+| Action | Pemohon (owner user/merchant, Leader komunitas) | Admin Regional | Superadmin |
 |--------|:---:|:---:|:---:|
 | Ajukan verifikasi entitas sendiri | ✅ | — | — |
 | Lihat status pengajuan sendiri | ✅ | — | — |
@@ -135,12 +141,15 @@ Contoh default Phase 1:
 | Lihat riwayat verifikasi entitas | ❌ | 👀 (read, region sendiri) | ✅ |
 
 > Admin Regional **cuma** boleh lihat (read) status verified entitas di region-nya buat monitoring — **ga bisa** approve/reject/revoke. Semua aksi kurasi di tangan Superadmin.
+>
+> Buat `community`: yang boleh ngajuin cuma **Leader/owner** komunitas itu (dicek via `user_roles` scope community + permission `verification.request_community`). Member biasa ga bisa ngajuin verifikasi komunitas.
 
 ### Permission keys (buat didaftarin di modul Role-Permission)
 
 | Key | Deskripsi | Scope |
 |-----|-----------|-------|
-| `verification.request` | Ajukan verifikasi entitas sendiri | member |
+| `verification.request` | Ajukan verifikasi entitas sendiri (user/merchant) | member |
+| `verification.request_community` | Ajukan verifikasi komunitas (khusus Leader) | community |
 | `verification.review` | Approve/reject pengajuan | global (Superadmin) |
 | `verification.revoke` | Cabut badge | global (Superadmin) |
 | `verification.view_queue` | Lihat antrian + dokumen | global (Superadmin) |
@@ -149,7 +158,7 @@ Contoh default Phase 1:
 
 ## 6. BADGE DISPLAY RULES
 
-- Badge tampil di: profil user, kartu merchant (listing + detail), author byline (news/announcement kalo relevan), komentar/post.
+- Badge tampil di: profil user, kartu merchant (listing + detail), **header/kartu komunitas (list + detail)**, author byline (news/announcement kalo relevan), komentar/post.
 - Frontend nentuin ikon/warna dari `type` + `is_verified = true`.
 - Kalo `is_verified = false` → **ga ada badge sama sekali** (ga ada state "pending badge").
 - Public/member-facing response **cuma** expose `is_verified` + `verification_type`. **Jangan bocorin** dokumen, `rejection_reason`, `reviewer_id`, atau detail internal ke response member-facing.
@@ -189,18 +198,27 @@ Owner bisnis (merchant udah published) → Merchant > Ajukan Verifikasi
 Superadmin → review → Approve → "Verified Merchant" muncul di listing
 ```
 
-### Use Case 3: Reject & resubmit
+### Use Case 3: Community ajukan verified (oleh Leader)
 ```
-Superadmin → dokumen buram/ga valid → Reject (reason: "Foto KTP tidak terbaca")
+Leader komunitas (community status=active) → Community Settings > Ajukan Verifikasi
+  → Upload akta/SK organisasi / bukti partner KAI
+  → Submit → status: pending
+Superadmin → review legitimasi komunitas → Approve
+  → "Verified Community" muncul di header & list komunitas
+```
+
+### Use Case 4: Reject & resubmit
+```
+Superadmin → dokumen buram/ga valid → Reject (reason: "Foto KTA tidak terbaca")
   → Pemohon dapat notif + alasan
   → Pemohon upload ulang → Submit request baru → pending lagi
 ```
 
-### Use Case 4: Revoke
+### Use Case 5: Revoke
 ```
-Superadmin → temukan pelanggaran / bisnis tutup / impersonation
+Superadmin → temukan pelanggaran / bisnis tutup / impersonation / komunitas bubar
   → Revoke (reason wajib)
-  → Badge hilang, is_verified = false, notif ke pemilik
+  → Badge hilang, is_verified = false, notif ke pemilik/Leader
   → Record revoke tersimpan permanen
 ```
 
@@ -213,7 +231,7 @@ Superadmin → temukan pelanggaran / bisnis tutup / impersonation
 - ✅ Resolve badge dari record aktif; cache `is_verified` cuma buat performa.
 - ✅ Wajibin `rejection_reason` & `revoke_reason`.
 - ✅ Simpan dokumen sensitif di storage private, akses cuma Superadmin.
-- ✅ Bedain badge user vs merchant lewat `type`.
+- ✅ Bedain badge user / merchant / community lewat `type`.
 - ✅ Batasin 1 request `pending` per entitas.
 
 ### ❌ DON'T
@@ -222,7 +240,8 @@ Superadmin → temukan pelanggaran / bisnis tutup / impersonation
 - ❌ Ngasih Admin Regional hak approve/revoke.
 - ❌ Ngeramu badge dari `email_verified`/`approval_status` — itu konsep beda.
 - ❌ Snapshot status di banyak tempat; satu sumber kebenaran = tabel `verifications`.
-- ❌ Verifikasi merchant yang belum `published`.
+- ❌ Verifikasi merchant yang belum `published` / komunitas yang ga `active`.
+- ❌ Ngasih member biasa hak ngajuin verifikasi komunitas (cuma Leader).
 
 ---
 
@@ -230,10 +249,11 @@ Superadmin → temukan pelanggaran / bisnis tutup / impersonation
 
 Ditandai, dikerjain pas masuk modul terkait:
 
-- **Role-Permission:** daftarin 4 permission keys (§5).
+- **Role-Permission:** daftarin 5 permission keys (§5), termasuk `verification.request_community` (scope community, default Leader).
 - **Notification:** daftarin 4 event (§7) + payload.
 - **User Management:** `ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT false` (additive).
 - **Directory / Merchant:** `ALTER TABLE merchants ADD COLUMN is_verified BOOLEAN DEFAULT false` (additive).
+- **Community:** `ALTER TABLE communities ADD COLUMN is_verified BOOLEAN DEFAULT false` (additive) + entry point "Ajukan Verifikasi" di Community Settings (khusus Leader).
 - **Storage:** konfirmasi bucket private + akses policy buat dokumen verifikasi.
 - **Media service:** tambah `context: "verification"`.
 
@@ -241,6 +261,7 @@ Ditandai, dikerjain pas masuk modul terkait:
 
 ## 11. FUTURE FEATURES (OUT OF SCOPE Phase 1)
 
+- ❌ **Verifikasi member scoped per-komunitas** (Leader nge-verify member di dalam komunitasnya, badge cuma berlaku di komunitas itu). Butuh dimensi `scope_type`/`scope_id` di `verifications` + cache di `community_members`. **Sengaja ditunda** — badge global (user/merchant/community, semua Superadmin) dijaga tetap seragam & bernilai. Baru dibangun kalau ada kebutuhan konkret.
 - ❌ Auto-KYC / integrasi verifikasi identitas pihak ketiga.
 - ❌ Tier badge (mis. "Official Organization" vs "Verified Individual").
 - ❌ Delegasi review ke Admin Regional.
@@ -252,7 +273,7 @@ Ditandai, dikerjain pas masuk modul terkait:
 
 ## 12. SUMMARY
 
-Verification Badge = **trust signal selektif yang di-grant manual oleh Superadmin**. Diajukan pemilik → di-review → approve/reject/revoke, semua append-only. Badge User & Merchant **beda produk** (label, dokumen, tampilan) tapi **satu mesin** (tabel `verifications`). Status di-resolve live dari record aktif; `is_verified` cuma cache. Terpisah tegas dari `email_verified`, merchant approval, dan ID Card.
+Verification Badge = **trust signal selektif yang di-grant manual oleh Superadmin**. Diajukan pemohon (user sendiri / owner merchant / Leader komunitas) → di-review → approve/reject/revoke, semua append-only. Badge **User, Merchant, & Community** = 3 produk (label, dokumen, tampilan beda) tapi **satu mesin** (tabel `verifications`, dibedakan `type`). Semua di-approve Superadmin. Status di-resolve live dari record aktif; `is_verified` cuma cache. Terpisah tegas dari `email_verified`, merchant approval, dan ID Card.
 
 ---
 

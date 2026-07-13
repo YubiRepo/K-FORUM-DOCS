@@ -59,7 +59,7 @@ Endpoint Superadmin buat review antrian verifikasi, lihat dokumen, approve/rejec
   "updated_at": "2026-07-10T09:00:00.000Z"
 }
 ```
-> `entity` di-resolve: kalau `entity_type=user` → dari `users`; kalau `merchant` → dari `merchants`. `documents[].url` = signed URL short-lived (dokumen private).
+> `entity` di-resolve: `entity_type=user` → dari `users`; `merchant` → dari `merchants`; `community` → dari `communities`. `documents[].url` = signed URL short-lived (dokumen private).
 
 ---
 
@@ -72,7 +72,7 @@ Endpoint Superadmin buat review antrian verifikasi, lihat dokumen, approve/rejec
 | Param | Type | Required | Default | Keterangan |
 |-------|------|----------|---------|-----------|
 | `status` | string | No | `pending` | `pending`\|`approved`\|`rejected`\|`revoked`\|`all` |
-| `entity_type` | string | No | — | filter `user`\|`merchant` |
+| `entity_type` | string | No | — | filter `user`\|`merchant`\|`community` |
 | `q` | string | No | — | cari nama entitas / pemohon |
 | `page` | int | No | 1 | |
 | `per_page` | int | No | 20 | |

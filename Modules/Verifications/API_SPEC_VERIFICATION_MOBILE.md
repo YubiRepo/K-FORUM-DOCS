@@ -8,8 +8,9 @@ Endpoint member-facing buat ngajuin verifikasi (User / Merchant), lihat syarat d
 
 - **Base URL Prefix:** `/api/v1/mobile/verification`
 - **Auth:** Wajib. `Authorization: Bearer <access_token>`
-- **Badge type = `entity_type`:** `user` | `merchant`.
-- Member cuma bisa ngajuin/lihat verifikasi **entitas miliknya sendiri** (akun sendiri, atau merchant yang dia owner).
+- **Badge type = `entity_type`:** `user` | `merchant` | `community`.
+- Member cuma bisa ngajuin/lihat verifikasi **entitas miliknya sendiri** (akun sendiri, merchant yang dia owner, atau komunitas di mana dia **Leader/owner**).
+- Khusus `community`: requester **wajib** Leader/owner komunitas itu (permission `verification.request_community`). Member biasa → 403.
 
 ### Error Responses (standar)
 
@@ -17,7 +18,7 @@ Endpoint member-facing buat ngajuin verifikasi (User / Merchant), lihat syarat d
 |------|------|
 | 400 | Validasi gagal (dokumen kurang dari syarat, entity_type invalid) |
 | 401 | Token invalid |
-| 403 | Bukan pemilik entitas / prasyarat belum terpenuhi (user non-active, merchant belum published) |
+| 403 | Bukan pemilik entitas / bukan Leader komunitas / prasyarat belum terpenuhi (user non-active, merchant belum published, community non-active) |
 | 409 | Sudah ada pengajuan `pending`, atau entitas sudah `approved` |
 | 422 | Dokumen tidak memenuhi `match_mode` |
 
@@ -41,7 +42,7 @@ Dipakai UI buat nampilin dokumen apa aja yang diterima sebelum submit.
 
 | Param | Type | Required | Keterangan |
 |-------|------|----------|-----------|
-| `entity_type` | string | Yes | `user` \| `merchant` |
+| `entity_type` | string | Yes | `user` \| `merchant` \| `community` |
 
 - **Response 200:**
 ```json
@@ -84,8 +85,8 @@ Dipakai UI buat nampilin dokumen apa aja yang diterima sebelum submit.
 ```
 
 - **Validasi:**
-  - `entity_id` harus milik requester (user = dirinya; merchant = merchant yg dia owner).
-  - Prasyarat: user `status='active'` / merchant `status='published'`.
+  - `entity_id` harus milik requester (user = dirinya; merchant = merchant yg dia owner; community = komunitas di mana dia **Leader/owner**).
+  - Prasyarat: user `status='active'` / merchant `status='published'` / community `status='active'`.
   - Dokumen harus memenuhi `match_mode` dari requirements.
   - Tidak boleh ada pengajuan `pending` / sudah `approved`.
 
@@ -119,7 +120,7 @@ Ambil pengajuan terbaru + status badge. Kalau `rejected`/`revoked`, `reason` iku
 
 | Param | Type | Required | Keterangan |
 |-------|------|----------|-----------|
-| `entity_type` | string | Yes | `user` \| `merchant` |
+| `entity_type` | string | Yes | `user` \| `merchant` \| `community` |
 | `entity_id` | string | Yes | id entitas milik requester |
 
 - **Response 200 (approved):**
