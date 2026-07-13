@@ -143,13 +143,17 @@ Ambil daftar artikel published. Konten mengikuti `Accept-Language`.
 **URL**: `/api/v1/mobile/news/articles`
 
 **Query Parameters**:
-- `category` (optional): Filter by category slug (mis. `olahraga`)
+- `category_id` (optional): Filter by category id (uuid)
 - `scope` (optional): Filter by scope slug (`indonesia`, `korea`, `korea_indonesia`)
-- `author_label` (optional): Filter by label asal (mis. `KAI Jakarta`)
+- `scope_id` (optional): Filter by scope id (uuid) — lihat `GET /scopes` untuk daftar id per scope
 - `featured` (optional): `true` untuk hanya artikel featured
 - `q` (optional): Search keyword (judul + konten)
 - `limit` (optional, default: 20, max: 100)
 - `offset` (optional, default: 0)
+
+> **Filter scope** (fixed 2026-07-13, lihat `NEWS_SCOPE_FILTER_ISSUE.md`): `scope` (slug) dan `scope_id` (uuid) kini benar-benar memfilter query di DB (bukan post-filter) — hanya salah satu yang perlu dikirim. `scope_id` yang bukan uuid valid akan ditolak `422` (bukan 500/diabaikan diam-diam). Pagination (`total`/`total_pages` dsb.) dihitung setelah filter diterapkan.
+>
+> **Artikel tanpa scope** (`scope: null`): tidak wajib scope saat publish. Artikel `scope_name: null` **hanya muncul saat request TANPA filter `scope`/`scope_id`** (list umum/search/featured) — begitu salah satu filter scope dikirim, artikel null-scope otomatis tidak ikut ke section manapun. Mobile portal per-scope harus mengandalkan filter ini, bukan menyaring sendiri di client.
 
 **Response (200 OK)**:
 ```json
