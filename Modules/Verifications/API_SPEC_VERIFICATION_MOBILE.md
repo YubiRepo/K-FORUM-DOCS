@@ -166,6 +166,7 @@ Ambil pengajuan terbaru + status badge. Kalau `rejected`/`revoked`, `reason` iku
 - Badge (`is_verified` + `verification_type`) di listing/profil di-expose lewat object User/Merchant di modul masing-masing — **bukan** endpoint ini. Endpoint ini khusus flow pengajuan.
 - Resubmit = panggil `POST /requests` lagi (setelah `rejected`/`revoked`). Record lama tetap tersimpan (append-only).
 - Notifikasi hasil (`approved`/`rejected`/`revoked`) dikirim via FCM oleh modul Notification.
+- **Detail mekanisme upload dokumen** (presign → PUT storage → submit, handling presign expired) ada di `VERIFICATION_DOCUMENT_ACCESS_SPEC.md` §3 & §5.1 — tidak diulang di sini.
 
 ---
 

@@ -211,6 +211,7 @@ Rules-as-data — ubah tanpa deploy.
 - **Transaksi atomik:** approve/revoke wajib update `verifications` + cache `is_verified` + insert `verification_events` dalam satu transaksi DB.
 - **Signed URL:** dokumen sensitif dikasih signed URL short-lived; jangan simpan URL permanen di response yang bisa ke-cache.
 - **Cross-module:** notif event (`verification.submitted/approved/rejected/revoked`) & permission keys didaftarin di modul Notification & Role-Permission (lihat RULES §7 & §5).
+- **Detail mekanisme lihat dokumen** (signed GET URL 15 menit, cara refresh saat kadaluarsa, checklist FE viewer) ada di `VERIFICATION_DOCUMENT_ACCESS_SPEC.md` §4 & §5.2 — tidak diulang di sini.
 
 ---
 
