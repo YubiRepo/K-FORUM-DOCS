@@ -80,7 +80,8 @@ Legend kolom **Status**: `[ ]` belum disentuh · `[~]` sebagian (ada bug/gap) ·
 
 | Key | Status | Catatan |
 |---|---|---|
-| `banned_keywords` / `report_auto_flag_threshold` / `report_rate_limit_per_day` | [ ] | Zero konsumen — submit post/comment/QnA/report tidak cek apa pun. UI `moderation.vue` salah klaim "dibaca semua modul" |
+| `banned_keywords` | [x] (2026-07-16) | Diimplementasikan penuh — reject 422 `CONTENT_BANNED_KEYWORD` di 6 modul (Community: post/comment/community/announcement/schedule/invitation; QnA: question/answer/edit_answer; News: comment+submit/update article; Event: create/update/admin variant/share; Directory: company/merchant/item/review/inquiry; Ads: create/update member+web). Substring case-insensitive, fail-open kalau settings gagal dibaca, no bypass utk admin. Lihat detail arsitektur di bawah |
+| `report_auto_flag_threshold` / `report_rate_limit_per_day` | [ ] | Di luar scope kerja banned_keywords — logic tetap milik modul Reporting sendiri, cuma numpang grup `moderation` di settings |
 
 ## Group: `maintenance`
 
@@ -108,7 +109,7 @@ Legend kolom **Status**: `[ ]` belum disentuh · `[~]` sebagian (ada bug/gap) ·
 
 | Item | Status | Catatan |
 |---|---|---|
-| Public config response-level cache (60s, sesuai spec) | [ ] | Hanya Redis fallback TTL 5 menit |
+| Public config response-level cache (60s, sesuai spec) | [~] | Redis cache utk `SystemSettingsProvider` (TTL 5 menit) diaktifkan 2026-07-16 (Option B di `main.go`, sebelumnya Option A/langsung DB) — bukan cache di level response endpoint 60s sesuai spec, tapi provider-level. Dipicu oleh `banned_keywords` yang dibaca di ~20 titik submit-konten per request |
 | Permission `manage_system_settings`/`manage_legal_documents` | [ ] | Ter-seed tapi route pakai `RequireRole`, permission ini tidak pernah dicek |
 | `editable_by` (usergod vs superadmin) | [x] backend / [ ] frontend | Backend benar (`update_settings.go`); frontend `GroupForm.vue` punya `ENFORCE_EDITABLE_BY=false` (TODO) |
 | Validasi per-key khusus (semver, timezone, dll) | [~] | `default_timezone` sudah (IANA validation di `update_settings.go`) — key lain (semver versi app, `default_language` vs `system_languages`, dll) belum |
@@ -150,3 +151,33 @@ Desain awal: value object `PlatformTimezone` + kontrak domain `PlatformTimezoneR
 `default_timezone` baru bisa aman dikaitkan ke interpretasi wall-clock event/DND KALAU mobile app juga diubah untuk (a) benar-benar timezone-aware saat organizer input jam, atau (b) selalu mengirim instant absolut (UTC) bukan wall-clock string, sehingga backend tidak perlu menerka timezone apa yang dimaksud. Sampai itu terjadi, key ini tetap [~] (tervalidasi tapi tidak dikonsumsi untuk logic apa pun) — status yang sama dengan sebelum sesi ini, ditambah validasi write-time yang aman.
 
 **Verifikasi yang sudah dijalankan:** `go build ./...`, `go vet ./...` bersih. Test lulus: value object, infra adapter, `internal/domain/notification/service` (termasuk regresi WIB+7 offset), handler web system-settings (termasuk 2 test baru), handler mobile event — termasuk `TestMobileEvent_GetCalendarExport_CorrectTimezone` dan `TestMobileEvent_ScheduleEvent_ReminderJobUsesCorrectTimezone` yang sudah ada sebelumnya (regresi bug +7 jam) — semua tetap hijau setelah refactor dari hardcode ke settings-driven.
+
+---
+
+## `banned_keywords` — implementasi penuh (2026-07-16)
+
+### Desain
+
+- **Domain service** `internal/domain/moderation/service/keyword_matcher.go` — `FindBannedKeyword(keywords []string, texts ...string) (matched string, found bool)`, substring case-insensitive, pure (tanpa I/O).
+- **App service** `internal/app/service/moderation/keyword_checker.go` — `KeywordChecker.Check(ctx, texts ...string) error`, baca `banned_keywords` via `SystemSettingsProvider.GetAll` (**bukan** `GetPublic` — key ini `is_public=false`). Fail-open kalau settings gagal dibaca (log WARN) — alasan: fail-closed akan menjadikan settings store sebagai titik gagal tunggal utk ~20 endpoint submit-konten sekaligus, blast radius jauh lebih besar daripada risiko konten tidak ter-filter sesaat. Match → `apperror.CodeContentBannedKeyword` ("CONTENT_BANNED_KEYWORD", 422), pesan generik — kata yang match tidak pernah dikembalikan ke client (hanya dicatat di log server untuk audit), supaya user tidak bisa membisect kata mana yang match.
+- Dipanggil sebagai statement pertama tiap `Execute()`, sebelum repository read/write apa pun.
+- Validasi sisi tulis: `case "banned_keywords"` baru di `validateSettingValue()` (`internal/app/usecase/system/update_settings.go`) — reject non-array, entri kosong, duplikat (case-insensitive), >100 karakter/kata, >500 entri.
+
+### Cakupan (6 modul, sesuai UI backoffice `moderation.vue` yang sudah live — bukan cuma 3 modul minimal di RULES.md)
+
+- **Community**: `create_post.go`, `create_comment.go`, `create_community.go`, `update_community.go`, `create_announcement.go`/`edit_announcement.go`, `create_schedule_entry.go`/`edit_schedule_entry.go`, `send_invitation.go`.
+- **QnA**: `submit_question.go`, `post_answer.go`, `answer_question.go` (admin-authored, tetap dicek), `edit_answer.go`.
+- **News**: `post_comment.go`, `submit_article.go`, `update_article.go` (admin-authored, tetap dicek).
+- **Event**: `create_event.go`, `update_event.go`, `create_admin_event.go`, `admin_update_event.go`, `share_event.go`.
+- **Directory/Merchant**: `create_company.go`/`update_company.go`, `create_merchant.go`/`update_merchant.go`, `create_item.go`/`update_item.go`, `leave_review.go`/`update_review.go`, `send_inquiry.go`, `reply_inquiry.go`.
+- **Ads/Promotions**: `create_ad.go`, `create_ad_web.go`, `update_ad.go`, `update_ad_web.go`.
+
+Tidak ada bypass role — konten admin/superadmin juga dicek (keputusan eksplisit, konsisten satu code path).
+
+### Efek samping: Redis cache utk SystemSettingsProvider diaktifkan
+
+Karena `banned_keywords` sekarang dibaca di ~20 titik submit-konten per request, `cmd/app/main.go` di-flip dari Option A (langsung Postgres) ke Option B (`CachedSystemSettingsProvider`, TTL 5 menit, sudah terhubung ke `Invalidate()` di `update_settings.go`). Ini mengubah behavior SEMUA konsumen settings (`maintenance_mode_enabled`, `default_language`, dll), bukan cuma moderation — risiko dianggap nihil karena Redis sudah jadi hard dependency (app fatal error saat startup kalau Redis unreachable).
+
+### Verifikasi yang sudah dijalankan
+
+`go build ./...`, `go vet ./...` bersih. Test baru: `internal/domain/moderation/service` (unit test matcher), `internal/app/service/moderation` (unit test checker — fail-open, no-match, match, regresi "harus panggil GetAll bukan GetPublic"), `internal/interfaces/http/handler/web/system_settings_handler_test.go` (validasi banned_keywords invalid/valid), 3 handler test representatif (`TestMobileCommunity_CreatePost_BannedKeyword`, `TestMobileQna_SubmitQuestion_BannedKeyword`, `TestMobileNews_PostComment_BannedKeyword`). Full suite (`mobile`, `web`, `domain/...`, `app/...`) tetap hijau setelah seluruh wiring 6 modul.
