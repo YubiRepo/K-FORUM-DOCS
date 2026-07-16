@@ -2,6 +2,10 @@
 
 Spesifikasi endpoint mobile untuk modul Community: pengelolaan komunitas, keanggotaan, join request (private), feed/postingan, serta interaksi (like, comment 1-level, save, share).
 
+> **Spesifikasi Sub-Modul Tambahan (Mobile):**
+> - **Papan Pengumuman & Schedule:** Lihat [`API_SPEC_COMMUNITY_ANNOUNCEMENT_SCHEDULE_MOBILE.md`](file:///Users/yubidev/Documents/PROJECTS/k_forum/docs/modules/Community/API_SPEC_COMMUNITY_ANNOUNCEMENT_SCHEDULE_MOBILE.md)
+> - **Undangan & Share Link:** Lihat [`API_SPEC_COMMUNITY_INVITE_MOBILE.md`](file:///Users/yubidev/Documents/PROJECTS/k_forum/docs/modules/Community/API_SPEC_COMMUNITY_INVITE_MOBILE.md)
+
 Berdasarkan `COMMUNITY_RULES.md` dan `COMMUNITY_DB_SCHEMA.md`.
 
 ---
@@ -73,10 +77,49 @@ Berdasarkan `COMMUNITY_RULES.md` dan `COMMUNITY_DB_SCHEMA.md`.
   "region": { "id": "uuid", "name": "Seoul" },
   "member_count": 1240,
   "is_member": true,
-  "membership_status": "active"
+  "membership_status": "active",
+  "latest_announcement": {
+    "id": "announcement_uuid",
+    "title": "Monthly community update",
+    "priority": "important",
+    "is_pinned": true,
+    "published_at": "2026-07-16T04:00:00Z"
+  },
+  "upcoming_schedule": {
+    "entry_id": "schedule_uuid",
+    "occurrence_date": "2026-07-18",
+    "title": "Community gathering",
+    "location": "Main Hall",
+    "start_at": "2026-07-18T03:00:00Z",
+    "end_at": "2026-07-18T05:00:00Z",
+    "all_day": false,
+    "my_response": "going"
+  }
 }
 ```
 > `region` bernilai `null` jika komunitas global. `membership_status`: `active` | `pending` | `banned` | `null` (belum gabung).
+>
+> `latest_announcement` dan `upcoming_schedule` wajib ada pada response object,
+> tetapi masing-masing boleh bernilai `null` jika tidak ada activity yang
+> eligible atau requester tidak punya akses ke konten komunitas private.
+
+#### Activity Preview Fields
+
+| Field | Type | Nullable | Keterangan |
+|---|---|---:|---|
+| `latest_announcement.id` | UUID | No | ID announcement untuk membuka detail |
+| `latest_announcement.title` | string | No | Judul pengumuman |
+| `latest_announcement.priority` | enum | No | `important` \| `normal` |
+| `latest_announcement.is_pinned` | boolean | No | Status pinned saat response dibuat |
+| `latest_announcement.published_at` | RFC3339 UTC | No | Wajib menggunakan suffix `Z` |
+| `upcoming_schedule.entry_id` | UUID | No | ID schedule entry/series |
+| `upcoming_schedule.occurrence_date` | `YYYY-MM-DD` | No | Identitas occurrence untuk detail/RSVP |
+| `upcoming_schedule.title` | string | No | Judul agenda |
+| `upcoming_schedule.location` | string | Yes | Lokasi singkat |
+| `upcoming_schedule.start_at` | RFC3339 UTC | No | Wajib menggunakan suffix `Z` |
+| `upcoming_schedule.end_at` | RFC3339 UTC | Yes | Wajib menggunakan suffix `Z` jika ada |
+| `upcoming_schedule.all_day` | boolean | No | Penanda agenda seharian |
+| `upcoming_schedule.my_response` | enum | Yes | `going` \| `maybe` \| `not_going` \| `null` |
 
 ### CommunityDetailObject
 ```json
@@ -236,6 +279,23 @@ Daftar komunitas `active`. Filter region & visibility, plus pencarian.
 }
 ```
 
+#### Activity preview rules
+
+- Setiap item memakai shape `CommunityListObject` yang sama; tidak ada envelope
+  atau pagination baru.
+- `latest_announcement` memilih announcement `published` yang belum expired,
+  dengan urutan `is_pinned DESC`, lalu `published_at DESC`.
+- `upcoming_schedule` memilih occurrence aktif terdekat dengan
+  `start_at >= now()`, termasuk hasil expand recurring schedule; occurrence
+  cancelled tidak boleh dipilih.
+- Community public boleh mengembalikan preview kepada non-member.
+- Community private hanya mengembalikan preview kepada anggota aktif. Untuk
+  non-member atau membership `pending`, kedua field harus `null`.
+- Implementasi backend wajib menghindari N+1 query. Ambil preview dengan batch
+  query/lateral join untuk semua `community_id` pada page tersebut.
+- Body/media announcement dan description lengkap schedule tidak perlu dikirim
+  pada object list.
+
 ---
 
 ### 2. Get Community Detail
@@ -256,7 +316,9 @@ Komunitas yang diikuti user (status `active`).
 - **URL:** `GET /api/v1/mobile/communities/mine`
 - **Auth:** Required (member)
 - **Query Params:** `limit` (default 20, max 50), `offset` (default 0)
-- **Response 200:** array `CommunityListObject` + `pagination`
+- **Response 200:** array `CommunityListObject` + `pagination`, termasuk
+  `latest_announcement` dan `upcoming_schedule` dengan selection rules yang
+  sama seperti Browse Communities.
 
 ---
 
@@ -480,11 +542,14 @@ Komunitas yang diikuti user (status `active`).
 
 ### 19. Presign Media Upload
 
-Minta presigned URL untuk upload file ke S3. Client upload langsung ke `upload_url` yang dikembalikan, lalu panggil confirm.
+Minta presigned URL untuk upload file ke S3. Client upload langsung ke `upload_url` / `presign_url` yang dikembalikan, lalu panggil confirm (jika diperlukan) atau gunakan `public_url` / `file_key`.
 
-- **URL:** `POST /api/v1/mobile/communities/media/presign`
+- **URL 1 (Post Media — Terverifikasi):** `POST /api/v1/mobile/communities/media/post/presign`
+  - Body: `{ "content_type": "image/jpeg" }` atau `{ "filename": "photo.jpg", "type": "post" }`
+  - Response 201: `{ "data": { "presign_url": "https://...", "key": "s3:/...", "public_url": "https://...", "expires_in": 900 } }`
+- **URL 2 (General / Media Sub-Modul):** `POST /api/v1/mobile/communities/media/presign`
 - **Auth:** Required — anggota aktif
-- **Request Body:**
+- **Request Body (General):**
 ```json
 {
   "filename": "photo.jpg",
@@ -497,12 +562,15 @@ Minta presigned URL untuk upload file ke S3. Client upload langsung ke `upload_u
 | `filename` | string | **Yes**  | Nama file dengan ekstensi     |
 | `type`     | string | **Yes**  | `avatar` / `post`             |
 
-- **Response 200:**
+- **Response 200 / 201:**
 ```json
 {
   "data": {
     "upload_url": "https://s3.ap-northeast-2.amazonaws.com/kforum-uploads/...",
+    "presign_url": "https://s3.ap-northeast-2.amazonaws.com/kforum-uploads/...",
     "file_key": "s3:/uploads/communities/abc123.jpg",
+    "key": "s3:/uploads/communities/abc123.jpg",
+    "public_url": "https://cdn.k-forum.id/uploads/communities/abc123.jpg",
     "expires_in": 900
   }
 }
