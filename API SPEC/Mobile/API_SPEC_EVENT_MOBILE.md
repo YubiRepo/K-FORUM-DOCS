@@ -65,6 +65,7 @@ Untuk menghapus media yang sudah diupload (sebelum dipakai), gunakan endpoint **
   "venue_address": "Jl. Pintu I Senayan, Jakarta",
   "event_date": "2026-06-15",
   "event_time": "14:00",
+  "timezone": "Asia/Jakarta",
   "category": {
     "id": "uuid",
     "name": "Sports"
@@ -106,6 +107,7 @@ Untuk menghapus media yang sudah diupload (sebelum dipakai), gunakan endpoint **
   "event_date": "2026-06-15",
   "event_end_date": null,
   "event_time": "14:00",
+  "timezone": "Asia/Jakarta",
   "registration_url": "https://eventbrite.com/e/futsal-2026",
   "organizer": {
     "id": "uuid",
@@ -123,8 +125,53 @@ Untuk menghapus media yang sudah diupload (sebelum dipakai), gunakan endpoint **
 }
 ```
 
+> `timezone`: IANA timezone identifier tempat event berlangsung (contoh: `Asia/Jakarta`, `Asia/Makassar`, `Asia/Jayapura`). Wajib diisi saat create/edit — dipakai untuk menghitung reminder dan export kalender dalam waktu absolut (UTC) yang benar.
 > Untuk event **online**: `venue_name` dan `venue_address` bernilai `null`, `online_platform` dan `online_url` diisi.
 > Untuk event **hybrid**: semua field venue dan online diisi.
+
+### 3. Event Feedback Object
+
+```json
+{
+  "id": "uuid",
+  "event_id": "event_123",
+  "user": {
+    "id": "uuid",
+    "name": "Doni Saputra",
+    "avatar": "https://cdn.example.com/avatars/doni.jpg"
+  },
+  "rating": 5,
+  "venue_rating": 4,
+  "organization_rating": 5,
+  "would_recommend": true,
+  "comment": "Acaranya seru banget, venue nyaman",
+  "is_anonymous": false,
+  "created_at": "2026-06-16T09:00:00.000Z",
+  "updated_at": "2026-06-16T09:00:00.000Z"
+}
+```
+
+> Kalau `is_anonymous: true`, field `user` bernilai `null` di response yang dilihat organizer/superadmin — isi feedback tetap tampil apa adanya.
+
+### 4. Event Feedback Summary Object
+
+```json
+{
+  "event_id": "event_123",
+  "total_feedback": 42,
+  "average_rating": 4.6,
+  "average_venue_rating": 4.3,
+  "average_organization_rating": 4.7,
+  "recommend_percentage": 92.9,
+  "rating_distribution": {
+    "5": 30,
+    "4": 8,
+    "3": 3,
+    "2": 1,
+    "1": 0
+  }
+}
+```
 
 ---
 
@@ -269,6 +316,7 @@ Buat event baru. Images dikirim sebagai array `s3:` key hasil dari presigned URL
     "event_date": "2026-06-15",
     "event_end_date": null,
     "event_time": "14:00",
+    "timezone": "Asia/Jakarta",
     "registration_url": "ext:https://eventbrite.com/e/futsal-2026"
   }
   ```
@@ -286,6 +334,7 @@ Buat event baru. Images dikirim sebagai array `s3:` key hasil dari presigned URL
     "event_date": "2026-06-20",
     "event_end_date": null,
     "event_time": "10:00",
+    "timezone": "Asia/Jakarta",
     "registration_url": "ext:https://eventbrite.com/e/webinar-pm"
   }
   ```
@@ -305,6 +354,7 @@ Buat event baru. Images dikirim sebagai array `s3:` key hasil dari presigned URL
     "event_date": "2026-07-10",
     "event_end_date": "2026-07-11",
     "event_time": "09:00",
+    "timezone": "Asia/Jayapura",
     "registration_url": null
   }
   ```
@@ -322,6 +372,7 @@ Buat event baru. Images dikirim sebagai array `s3:` key hasil dari presigned URL
   - `event_date`: Required, must be future date, format `YYYY-MM-DD`
   - `event_end_date`: Optional, must be >= `event_date`
   - `event_time`: Required, format `HH:mm`
+  - `timezone`: **Required** (mandatory, breaking change per 2026-07-17), string, must be a valid IANA timezone identifier (validated server-side via Go `time.LoadLocation`). Contoh nilai valid: `Asia/Jakarta`, `Asia/Makassar`, `Asia/Jayapura`. Dipakai untuk mengubah `event_date`+`event_time` (wall-clock lokal event) menjadi instant UTC absolut untuk reminder scheduling & calendar export
   - `registration_url`: Optional, valid URL
 
 - **Response (Success 201 — Auto Published)**:
@@ -392,6 +443,7 @@ Ambil daftar events yang sudah published. Dapat difilter by tipe, venue/kota, ka
         "venue_address": "Jl. Pintu I Senayan, Jakarta Pusat",
         "event_date": "2026-06-15",
         "event_time": "14:00",
+        "timezone": "Asia/Jakarta",
         "category": { "id": "uuid", "name": "Sports" },
         "organizer": {
           "id": "uuid",
@@ -411,6 +463,7 @@ Ambil daftar events yang sudah published. Dapat difilter by tipe, venue/kota, ka
         "venue_address": null,
         "event_date": "2026-06-20",
         "event_time": "10:00",
+        "timezone": "Asia/Jakarta",
         "category": { "id": "uuid", "name": "Business" },
         "organizer": {
           "id": "uuid",
@@ -454,6 +507,7 @@ Ambil daftar event yang di-highlight (featured) oleh Superadmin — buat carouse
         "venue_address": "Jl. Gatot Subroto, Jakarta Selatan",
         "event_date": "2026-08-01",
         "event_time": "09:00",
+        "timezone": "Asia/Jakarta",
         "category": { "id": "uuid", "name": "Community" },
         "organizer": {
           "id": "uuid",
@@ -498,6 +552,7 @@ Ambil daftar event yang akan datang, diurutkan dari yang paling dekat (`event_da
         "venue_address": "Jl. Pintu I Senayan, Jakarta Pusat",
         "event_date": "2026-06-15",
         "event_time": "14:00",
+        "timezone": "Asia/Jakarta",
         "category": { "id": "uuid", "name": "Sports" },
         "organizer": {
           "id": "uuid",
@@ -548,6 +603,7 @@ Ambil detail lengkap satu event.
       "event_date": "2026-06-15",
       "event_end_date": null,
       "event_time": "14:00",
+      "timezone": "Asia/Jakarta",
       "registration_url": "https://eventbrite.com/e/futsal-2026",
       "organizer": {
         "id": "uuid",
@@ -586,9 +642,12 @@ Edit event milik sendiri. Images menggunakan `s3:` key hasil dari presigned URL 
     "venue_name": "GOR Sumantri Brojonegoro",
     "venue_address": "Jl. HR Rasuna Said, Kuningan, Jakarta",
     "event_date": "2026-06-20",
-    "event_time": "15:00"
+    "event_time": "15:00",
+    "timezone": "Asia/Jakarta"
   }
   ```
+
+  > `timezone` **wajib** dikirim juga saat edit (bukan hanya create) — sama seperti `event_date`/`event_time`, memakai IANA identifier (contoh: `Asia/Jakarta`, `Asia/Makassar`, `Asia/Jayapura`).
 
 - **Response (Success 200)**:
   ```json
@@ -916,6 +975,7 @@ Ambil daftar event yang ada di jadwal pribadi.
         "venue_name": "GOR Senayan",
         "event_date": "2026-06-15",
         "event_time": "14:00",
+        "timezone": "Asia/Jakarta",
         "status": "scheduled",
         "reminder_enabled": true,
         "reminder_time": "1 day before",
@@ -955,6 +1015,268 @@ Ambil daftar kategori event untuk dropdown saat create event.
 
 ---
 
+### 19. Submit Event Feedback
+
+Isi feedback (angket) untuk event yang sudah berlangsung. Tidak bisa dipakai oleh organizer event itu sendiri.
+
+- **URL**: `POST /api/v1/mobile/events/{event_id}/feedback`
+- **Autentikasi**: Yes
+
+- **Request Body**:
+  ```json
+  {
+    "rating": 5,
+    "venue_rating": 4,
+    "organization_rating": 5,
+    "would_recommend": true,
+    "comment": "Acaranya seru banget, venue nyaman",
+    "is_anonymous": false
+  }
+  ```
+
+- **Request Validation**:
+  - `rating`: Required, integer, 1–5
+  - `venue_rating`: Optional, integer, 1–5
+  - `organization_rating`: Optional, integer, 1–5
+  - `would_recommend`: Optional, boolean
+  - `comment`: Optional, string, max 1000 chars. Tunduk pada filter kata terlarang platform (banned keywords) — comment yang mengandung kata terlarang ditolak `422`
+  - `is_anonymous`: Optional, boolean, default `false`
+  - Event harus berstatus `published` dan waktu mulainya (`event_date`+`event_time` sesuai `timezone`) sudah lewat
+  - Event masih dalam window feedback (default 30 hari setelah event berlangsung, diatur superadmin)
+  - User bukan organizer event tsb
+  - User belum pernah submit feedback untuk event ini (satu feedback per user per event — kalau sudah ada, pakai `PUT` untuk edit)
+
+- **Response (Success 201)**:
+  ```json
+  {
+    "data": {
+      "id": "feedback_123",
+      "event_id": "event_123",
+      "rating": 5,
+      "venue_rating": 4,
+      "organization_rating": 5,
+      "would_recommend": true,
+      "comment": "Acaranya seru banget, venue nyaman",
+      "is_anonymous": false,
+      "created_at": "2026-06-16T09:00:00.000Z"
+    },
+    "message": "Feedback submitted successfully"
+  }
+  ```
+
+- **Response (Error — 403)**:
+  ```json
+  {
+    "message": "Organizer cannot submit feedback for their own event"
+  }
+  ```
+
+- **Response (Error — 409)**:
+  ```json
+  {
+    "message": "You have already submitted feedback for this event. Use edit instead."
+  }
+  ```
+
+- **Response (Error — 422)**:
+  ```json
+  {
+    "message": "Feedback is not open yet — event has not started"
+  }
+  ```
+
+---
+
+### 20. Get My Feedback for Event
+
+Ambil feedback milik sendiri untuk satu event — dipakai untuk cek apakah sudah submit dan untuk prefill form edit.
+
+- **URL**: `GET /api/v1/mobile/events/{event_id}/feedback/me`
+- **Autentikasi**: Yes
+
+- **Response (Success 200)**:
+  ```json
+  {
+    "data": {
+      "id": "feedback_123",
+      "event_id": "event_123",
+      "rating": 5,
+      "venue_rating": 4,
+      "organization_rating": 5,
+      "would_recommend": true,
+      "comment": "Acaranya seru banget, venue nyaman",
+      "is_anonymous": false,
+      "created_at": "2026-06-16T09:00:00.000Z",
+      "updated_at": "2026-06-16T09:00:00.000Z"
+    }
+  }
+  ```
+
+- **Response (Error — 404)**:
+  ```json
+  {
+    "message": "You have not submitted feedback for this event"
+  }
+  ```
+
+---
+
+### 21. Edit My Feedback
+
+Edit feedback milik sendiri. Hanya bisa selama masih dalam window feedback.
+
+- **URL**: `PUT /api/v1/mobile/events/{event_id}/feedback`
+- **Autentikasi**: Yes (owner only)
+
+- **Request Body**: Sama seperti Submit Feedback — field yang tidak dikirim tetap memakai nilai sebelumnya.
+  ```json
+  {
+    "rating": 4,
+    "comment": "Direvisi: venue agak sempit tapi tetap seru"
+  }
+  ```
+
+- **Response (Success 200)**:
+  ```json
+  {
+    "data": {
+      "id": "feedback_123",
+      "event_id": "event_123",
+      "rating": 4,
+      "venue_rating": 4,
+      "organization_rating": 5,
+      "would_recommend": true,
+      "comment": "Direvisi: venue agak sempit tapi tetap seru",
+      "is_anonymous": false,
+      "updated_at": "2026-06-18T10:00:00.000Z"
+    },
+    "message": "Feedback updated successfully"
+  }
+  ```
+
+- **Response (Error — 403)**:
+  ```json
+  {
+    "message": "Feedback window has closed for this event"
+  }
+  ```
+
+---
+
+### 22. Delete My Feedback
+
+Hapus feedback milik sendiri.
+
+- **URL**: `DELETE /api/v1/mobile/events/{event_id}/feedback`
+- **Autentikasi**: Yes (owner only)
+
+- **Response (Success 200)**:
+  ```json
+  {
+    "message": "Feedback deleted"
+  }
+  ```
+
+---
+
+### 23. Get Event Feedback List (Organizer)
+
+Ambil semua feedback untuk event milik sendiri. Hanya organizer event tsb yang boleh akses — user lain (bukan organizer) mendapat `403`.
+
+- **URL**: `GET /api/v1/mobile/events/{event_id}/feedback`
+- **Autentikasi**: Yes (organizer/owner only)
+- **Query Parameters**:
+  - `sort` (optional): `created_at`, `-created_at`, `rating`, `-rating` (default: `-created_at`)
+  - `limit` (optional, default: 20, max: 100)
+  - `offset` (optional, default: 0)
+
+- **Response (Success 200)**:
+  ```json
+  {
+    "data": [
+      {
+        "id": "feedback_123",
+        "event_id": "event_123",
+        "user": {
+          "id": "uuid",
+          "name": "Doni Saputra",
+          "avatar": "https://cdn.example.com/avatars/doni.jpg"
+        },
+        "rating": 5,
+        "venue_rating": 4,
+        "organization_rating": 5,
+        "would_recommend": true,
+        "comment": "Acaranya seru banget, venue nyaman",
+        "is_anonymous": false,
+        "created_at": "2026-06-16T09:00:00.000Z"
+      },
+      {
+        "id": "feedback_124",
+        "event_id": "event_123",
+        "user": null,
+        "rating": 4,
+        "venue_rating": 3,
+        "organization_rating": 4,
+        "would_recommend": true,
+        "comment": "Cukup baik, parkiran kurang luas",
+        "is_anonymous": true,
+        "created_at": "2026-06-16T11:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "limit": 20,
+      "offset": 0,
+      "total": 42
+    }
+  }
+  ```
+
+- **Response (Error — 403)**:
+  ```json
+  {
+    "message": "Only the event organizer can view its feedback"
+  }
+  ```
+
+---
+
+### 24. Get Event Feedback Summary (Organizer)
+
+Ambil ringkasan statistik feedback untuk event milik sendiri.
+
+- **URL**: `GET /api/v1/mobile/events/{event_id}/feedback/summary`
+- **Autentikasi**: Yes (organizer/owner only)
+
+- **Response (Success 200)**:
+  ```json
+  {
+    "data": {
+      "event_id": "event_123",
+      "total_feedback": 42,
+      "average_rating": 4.6,
+      "average_venue_rating": 4.3,
+      "average_organization_rating": 4.7,
+      "recommend_percentage": 92.9,
+      "rating_distribution": {
+        "5": 30,
+        "4": 8,
+        "3": 3,
+        "2": 1,
+        "1": 0
+      }
+    }
+  }
+  ```
+
+- **Response (Error — 403)**:
+  ```json
+  {
+    "message": "Only the event organizer can view its feedback"
+  }
+  ```
+
+---
+
 ## UI Flow Example
 
 ### Flow: Create Event Offline dengan Multiple Images
@@ -986,6 +1308,7 @@ Ambil daftar kategori event untuk dropdown saat create event.
    │                                                     │
    │ Tanggal:      [2026-06-15]                          │
    │ Waktu:        [14:00]                               │
+   │ Zona Waktu:   [Asia/Jakarta ▼]  (wajib diisi)       │
    │ Reg. Link:    [https://eventbrite.com/...]          │
    │                                                     │
    │               [Simpan Draft] [Publish / Submit]     │
@@ -1030,6 +1353,34 @@ Ambil daftar kategori event untuk dropdown saat create event.
    → Event langsung masuk ke Google Calendar user
 ```
 
+### Flow: Isi Feedback Setelah Event Selesai
+
+```
+1. User buka detail event yang sudah lewat tanggalnya
+   → Banner muncul: "Bagaimana pengalamanmu di event ini?" [Isi Feedback]
+
+2. Modal Feedback:
+   ┌─────────────────────────────────────────────────────┐
+   │ Feedback: Futsal Tournament 2026                    │
+   ├─────────────────────────────────────────────────────┤
+   │ Rating Keseluruhan:     ★★★★★                       │
+   │ Rating Venue:           ★★★★☆                       │
+   │ Rating Penyelenggaraan: ★★★★★                       │
+   │ Rekomendasi:            [✓] Ya  [ ] Tidak            │
+   │ Komentar:               [Acaranya seru banget...]   │
+   │ [ ] Kirim sebagai anonim                             │
+   │                                                     │
+   │                                    [Kirim Feedback] │
+   └─────────────────────────────────────────────────────┘
+
+3. POST /api/v1/mobile/events/{event_id}/feedback
+   { "rating": 5, "venue_rating": 4, "organization_rating": 5,
+     "would_recommend": true, "comment": "...", "is_anonymous": false }
+
+4. Response: Success → tombol berubah jadi "Edit Feedback"
+   → Organizer mendapat notifikasi feedback baru
+```
+
 ---
 
 ## Important Notes
@@ -1044,6 +1395,10 @@ Ambil daftar kategori event untuk dropdown saat create event.
 - ✅ `venue_name` + `venue_address` untuk offline/hybrid (string bebas)
 - ✅ `online_platform` + `online_url` untuk online/hybrid
 - ✅ Sertakan `export_calendar: true` untuk dapatkan calendar export links
+- ✅ **`timezone` wajib diisi** (mandatory) saat create maupun edit event — IANA identifier seperti `Asia/Jakarta`, `Asia/Makassar`, atau `Asia/Jayapura`. Field ini menganchor `event_date`+`event_time` (wall-clock lokal) ke instant UTC absolut, dipakai untuk reminder scheduling & calendar export
+- ✅ Feedback hanya bisa diisi setelah event berlangsung, dan hanya oleh user yang bukan organizer event tsb
+- ✅ Satu feedback per user per event — pakai `PUT` untuk revisi, bukan `POST` berulang
+- ✅ Hanya organizer event yang bisa lihat daftar & ringkasan feedback event miliknya
 
 ### ❌ DON'T:
 - ❌ Jangan kirim base64 atau file langsung saat create/edit event
@@ -1053,6 +1408,10 @@ Ambil daftar kategori event untuk dropdown saat create event.
 - ❌ Jangan edit event yang sedang `pending_approval` atau sudah `published`
 - ❌ Tidak ada fitur favorite — hanya save/bookmark
 - ❌ `is_featured` read-only di mobile — tidak ada cara set/toggle dari client (editorial, dikontrol Superadmin via backoffice)
+- ❌ **Breaking change (2026-07-17)**: Jangan omit `timezone` saat create/edit — request tanpa `timezone` akan ditolak `422` (`DOMAIN_EVENT_TIMEZONE_REQUIRED`). Client lama yang belum kirim field ini wajib update dulu sebelum create/edit event akan berhasil lagi
+- ❌ Organizer tidak bisa submit feedback untuk eventnya sendiri
+- ❌ User selain organizer tidak bisa lihat daftar/ringkasan feedback event (bukan konten publik)
+- ❌ Feedback tidak bisa disubmit sebelum event dimulai, atau setelah window feedback tertutup
 
 ### Status Flow:
 
@@ -1095,7 +1454,8 @@ Standard error responses:
     "venue_name": ["Venue name is required for offline events"],
     "online_url": ["Online URL is required for online events"],
     "event_date": ["Event date must be in the future"],
-    "images": ["Maximum 10 images allowed"]
+    "images": ["Maximum 10 images allowed"],
+    "timezone": ["Timezone is required and must be a valid IANA identifier (e.g. Asia/Jakarta)"]
   }
 }
 ```
@@ -1110,9 +1470,18 @@ Standard error responses:
 | Event date di masa lalu | 422 | Validation failed |
 | venue_name kosong untuk offline event | 422 | Validation failed |
 | online_url kosong untuk online event | 422 | Validation failed |
+| `timezone` tidak dikirim saat create/edit | 422 | Validation failed (`DOMAIN_EVENT_TIMEZONE_REQUIRED`) |
+| `timezone` bukan IANA identifier valid (gagal `time.LoadLocation`) | 422 | Validation failed (`DOMAIN_EVENT_TIMEZONE_INVALID`) |
 | Edit published event | 403 | Status not editable |
 | Event not found | 404 | Invalid event_id |
 | Unauthenticated save/schedule | 401 | Auth required |
+| Organizer submit feedback event sendiri | 403 | Organizer cannot review own event |
+| Submit feedback sebelum event mulai | 422 | Feedback not open yet |
+| Submit feedback dua kali untuk event yang sama | 409 | Already submitted, use PUT |
+| Edit/delete feedback setelah window tertutup | 403 | Feedback window closed |
+| Comment feedback mengandung kata terlarang | 422 | Validation failed (banned keyword) |
+| Non-organizer akses list/summary feedback | 403 | Only organizer can view |
+| Get feedback/me tanpa pernah submit | 404 | No feedback found |
 
 ---
 

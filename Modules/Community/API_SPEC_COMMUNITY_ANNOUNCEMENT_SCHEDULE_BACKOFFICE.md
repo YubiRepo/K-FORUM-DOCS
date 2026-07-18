@@ -82,17 +82,18 @@ Reuse Announcement Object, Schedule Entry Object, dan Occurrence Object dari spe
   ```json
   {
     "data": [
-      { "id": "sch_001", "community": { "id": "comm_futsal", "name": "Futsal Jakarta" }, "title": "Latihan rutin", "recurrence": "FREQ=WEEKLY;BYDAY=SA", "status": "active", "created_by": { "id": "usr_01", "name": "Budi" }, "start_at": "2026-07-05T01:00:00.000Z" }
+      { "id": "sch_001", "community": { "id": "comm_futsal", "name": "Futsal Jakarta" }, "title": "Latihan rutin", "recurrence": "FREQ=WEEKLY;BYDAY=SA", "status": "active", "created_by": { "id": "usr_01", "name": "Budi" }, "start_at": "2026-07-05T01:00:00.000Z", "timezone": "Asia/Jakarta" }
     ],
     "pagination": { "limit": 20, "offset": 0, "total": 58 }
   }
   ```
 > List backoffice menampilkan **entry** (bukan expand occurrence) — oversight ga butuh kalender per tanggal. Untuk detail RSVP satu occurrence, pakai endpoint mobile B11 (superadmin override).
+> `timezone` (ditambahkan 2026-07-17): IANA identifier agenda ini — ditambahkan supaya moderator bisa melihat konteks zona waktu saat me-review `start_at`, konsisten dengan yang sudah ada di response mobile.
 
 ## B2. Detail Agenda
 - **URL**: `GET /schedule/{entry_id}`
 - **Autentikasi**: Yes
-- **Response (200)**: `{ "data": { Schedule Entry Object + community + rsvp_total } }`
+- **Response (200)**: `{ "data": { Schedule Entry Object + community + rsvp_total + timezone } }`
 
 ## B3. Moderasi Agenda (Batalin / Hapus)
 - **URL**: `POST /schedule/{entry_id}/moderate`

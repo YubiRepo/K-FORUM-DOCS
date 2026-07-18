@@ -138,6 +138,10 @@ Content-Type: application/json
 
 > **Catatan:** Master toggle (`all_notifications_enabled = false`) dan DND **tidak mempengaruhi** notifikasi announcement yang bersifat bypass (disaster, system, urgent CRITICAL/HIGH).
 
+> **Catatan timezone (2026-07-17):** `do_not_disturb_start_time`/`do_not_disturb_end_time` adalah jam lokal wall-clock — **tidak ada field timezone terpisah untuk DND**, backend menentukan sendiri "jam berapa sekarang" versi user berdasarkan timezone device user yang paling terakhir aktif (field `timezone` yang sudah dikirim device saat register FCM/refresh token — lihat kolom `device_registrations.timezone`, ditambahkan 2026-07-10). Kalau device belum pernah kirim timezone (app lama), fallback ke `default_timezone` System Settings, lalu ke `Asia/Jakarta` kalau itu juga tidak ada. Jadi user cukup isi jam DND sesuai jam lokal mereka saat ini — tidak perlu (dan tidak bisa) memilih timezone eksplisit untuk field ini, beda dengan Event yang wajib pilih timezone eksplisit karena Event terikat lokasi, bukan device.
+>
+> **Drift dokumentasi ditemukan (bukan disebabkan perubahan ini, tidak diperbaiki di sini):** `API_SPEC_FCM.md` di direktori yang sama mendokumentasikan tabel `fcm_tokens` dengan field `fcm_token`/`device_id`/`platform` saja — tabel sebenarnya bernama `device_registrations` dan sudah punya kolom `timezone` (serta field lain) sejak 2026-07-10, tidak pernah didokumentasikan ulang. Spec itu perlu direvisi terpisah, di luar scope perubahan DND ini.
+
 **Response `200 OK`**
 ```json
 {

@@ -108,6 +108,7 @@ Kalender agenda milik komunitas: latihan rutin, rapat, kegiatan, turnamen. Anggo
 | `all_day` | `true` = sepanjang hari (abaikan komponen jam) |
 | `location` | Teks bebas (opsional) — mis. "GOR Senayan Lapangan 3" |
 | `recurrence` | Nullable — aturan berulang RRULE-style (mis. `FREQ=WEEKLY;BYDAY=SA`). **Aktif Phase 1** |
+| `timezone` | **Ditambahkan 2026-07-17.** IANA identifier (mis. `Asia/Jakarta`) — **wajib** diisi eksplisit oleh creator saat create (client boleh prefill dari device, tidak pernah diinfer diam-diam di backend), **opsional** saat edit (partial update, fallback ke nilai lama kalau di-omit). Menentukan zona waktu yang dipakai untuk merekonstruksi `start_at`/occurrence dengan benar — lihat §Recurrence & Occurrence. |
 | `status` | `active` \| `cancelled` (batal seluruh series/agenda) |
 
 ### Entitas: CommunityScheduleRsvp
@@ -145,6 +146,7 @@ Ini bagian paling rawan, jadi aturannya dibikin eksplisit.
 - **Batalin satu tanggal** = insert `community_schedule_exceptions (entry_id, occurrence_date, type='cancelled')`. Occurrence itu tampil dengan tanda batal; RSVP dinonaktifkan.
 - **Batalin seluruh agenda** = set `entries.status='cancelled'`. Semua occurrence tampil batal.
 - **Ubah detail satu occurrence** (mis. ganti jam Sabtu ini doang) → **ditunda Phase 2** (`exception.type='modified'` sudah disiapkan sebagai hook).
+- **Rekonstruksi occurrence memakai `entry.timezone` (ditambahkan 2026-07-17), bukan zona server atau zona apa pun yang menempel di kolom `start_at` (TIMESTAMPTZ) pasca-baca dari database.** `start_at` disimpan sebagai instant absolut (Postgres menormalisasi ke UTC internal), sehingga membaca komponen jam/tanggalnya langsung tanpa mengonversi dulu ke `entry.timezone` bisa salah untuk agenda yang jam lokalnya menyebrang tengah malam UTC (mis. jam 03:00 WIB = 20:00 UTC hari sebelumnya) — baik jam occurrence-nya maupun *hari apa* occurrence itu jatuh (relevan untuk `recurrence` mingguan/bulanan tanpa `BYDAY` eksplisit). Bug ini ditemukan & diperbaiki 2026-07-17 bersamaan dengan penambahan kolom `timezone`.
 
 ---
 

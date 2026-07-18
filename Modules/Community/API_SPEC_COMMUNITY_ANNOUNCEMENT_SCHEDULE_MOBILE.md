@@ -58,10 +58,18 @@ Untuk aturan bisnis lihat `COMMUNITY_ANNOUNCEMENT_SCHEDULE_RULES.md`. Untuk sche
   "end_at": "2026-07-05T03:00:00.000Z",
   "all_day": false,
   "recurrence": "FREQ=WEEKLY;BYDAY=SA",
+  "timezone": "Asia/Jakarta",
   "status": "active",
   "created_at": "2026-07-03T08:00:00.000Z"
 }
 ```
+> `timezone` (ditambahkan 2026-07-17): IANA identifier (mis. `Asia/Jakarta`,
+> `Asia/Makassar`, `Asia/Jayapura`) yang menentukan zona waktu agenda ini —
+> **wajib** diisi creator secara eksplisit saat create (lihat B4), bukan
+> diinfer diam-diam dari device. Dipakai backend untuk merekonstruksi
+> occurrence (jam & tanggal) recurring dengan benar; tanpa ini, agenda
+> dengan jam lokal yang menyebrang tengah malam UTC (mis. 03:00 WIB) bisa
+> salah hari/jam saat di-generate ulang (bug yang sudah diperbaiki 2026-07-17).
 
 ### 3. Occurrence Object
 Satu instance agenda pada satu tanggal. Hasil expand recurrence (dirakit backend). Ini yang dipakai buat render kalender.
@@ -227,10 +235,12 @@ Detail satu tanggal termasuk ringkasan & (untuk pengelola) daftar peserta.
     "start_at": "2026-07-05T01:00:00.000Z",
     "end_at": "2026-07-05T03:00:00.000Z",
     "all_day": false,
-    "recurrence": "FREQ=WEEKLY;BYDAY=SA"
+    "recurrence": "FREQ=WEEKLY;BYDAY=SA",
+    "timezone": "Asia/Jakarta"
   }
   ```
   > `recurrence` opsional; NULL = agenda one-off. `end_at` opsional (harus ≥ `start_at`).
+  > `timezone`: **Wajib** (`binding:"required"` — 422 kalau kosong atau bukan IANA identifier valid). Client boleh prefill dari timezone device creator, tapi field ini harus selalu dikirim eksplisit, tidak pernah diinfer diam-diam di backend.
 - **Response (201)**: `{ "data": { Schedule Entry Object }, "message": "Schedule created" }`
 
 ## B5. Edit Agenda
@@ -239,6 +249,7 @@ Detail satu tanggal termasuk ringkasan & (untuk pengelola) daftar peserta.
 - **Request Body**: field sama dengan B4 (partial).
 - **Response (200)**: `{ "data": { Schedule Entry Object }, "message": "Schedule updated" }`
 > **Catatan:** edit agenda mengubah **seluruh series**. Ubah detail **satu occurrence** saja belum didukung Phase 1 (Phase 2).
+> **Catatan `timezone` saat edit (beda dengan B4):** **opsional** di sini — kalau di-omit dari body, entry tetap pakai `timezone` yang sudah tersimpan (partial update, bukan reset ke default). Kirim field ini hanya kalau memang ingin mengubah zona agenda.
 
 ## B6. Batalin Satu Occurrence
 - **URL**: `POST /schedule/{entry_id}/cancel-occurrence`
@@ -317,13 +328,20 @@ Daftar nama peserta per respons — untuk pengelola melihat siapa yang ikut.
 | `422` | Validation error / window terlalu lebar |
 | `500` | Internal Server Error |
 
+**Validation errors baru (2026-07-17, B4/B5):**
+
+| Kode Domain | HTTP | Kondisi |
+|---|---|---|
+| `DOMAIN_COMMUNITY_SCHEDULE_ENTRY_TIMEZONE_REQUIRED` | 422 | `timezone` tidak dikirim saat create (B4) |
+| `DOMAIN_COMMUNITY_SCHEDULE_ENTRY_TIMEZONE_INVALID` | 422 | `timezone` bukan IANA identifier valid (gagal validasi `time.LoadLocation`), create maupun edit |
+
 ---
 
 ## Notes & Best Practices
 
 1. **Permission check per komunitas.** `403` bila requester bukan anggota (untuk baca private) atau tak punya permission kelola pada `community_id` tersebut. Jangan andalkan client-side gating.
 2. **Kalender selalu ber-window.** `GET /schedule` wajib `from`/`to`. Client memuat per bulan/minggu, backend expand recurrence hanya dalam window (maks ~92 hari).
-3. **Occurrence key = `occurrence_date` (YYYY-MM-DD).** Semua aksi RSVP/cancel menargetkan `(entry_id, occurrence_date)`. Time-of-day diambil dari `entry.start_at`.
+3. **Occurrence key = `occurrence_date` (YYYY-MM-DD).** Semua aksi RSVP/cancel menargetkan `(entry_id, occurrence_date)`. Time-of-day diambil dari `entry.start_at`, direkonstruksi ulang di zona `entry.timezone` (lihat §Model Data Utama — bukan zona server, bukan zona device requester).
 4. **Upload media dulu.** Untuk pengumuman bermedia, `POST /api/v1/mobile/media/upload` (context `community_announcement`) lalu kirim URL di body. Maks 5 gambar.
 5. **Timestamp ISO 8601 UTC**; `occurrence_date` memakai format tanggal `YYYY-MM-DD` (tanpa waktu).
 6. **Caching:** feed pengumuman & kalender aman di-cache pendek (1–5 menit); invalidasi lokal setelah aksi RSVP/create.

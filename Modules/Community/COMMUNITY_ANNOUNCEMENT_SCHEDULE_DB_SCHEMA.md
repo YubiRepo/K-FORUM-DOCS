@@ -117,6 +117,9 @@ CREATE TABLE community_schedule_entries (
   -- Recurrence (AKTIF Phase 1)
   recurrence    TEXT          NULL,                   -- RRULE-style, mis. 'FREQ=WEEKLY;BYDAY=SA'. NULL = one-off
 
+  -- Timezone (ditambahkan migrasi 20260717080434, 2026-07-17)
+  timezone      VARCHAR(64)   NOT NULL DEFAULT 'Asia/Jakarta',  -- IANA identifier; wajib diisi eksplisit oleh creator saat create (lihat API spec mobile B4). Kolom ditambah via ALTER TABLE ADD COLUMN dengan DEFAULT ini, sehingga row lama otomatis ter-backfill ke 'Asia/Jakarta' (asumsi yang sudah berlaku sebelum migrasi, bukan regresi) — lihat COMMUNITY_ANNOUNCEMENT_SCHEDULE_RULES.md §Recurrence & Occurrence untuk kenapa kolom ini perlu.
+
   -- Lifecycle
   status        VARCHAR(10)   NOT NULL DEFAULT 'active',  -- 'active' | 'cancelled' (batal seluruh agenda)
 
@@ -291,6 +294,8 @@ type CommunityScheduleEntry struct {
 
 	Recurrence *string `json:"recurrence,omitempty" db:"recurrence"` // RRULE, NULL = one-off
 
+	Timezone string `json:"timezone" db:"timezone"` // IANA identifier, wajib eksplisit (ditambahkan 2026-07-17)
+
 	Status ScheduleStatus `json:"status" db:"status"`
 
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
@@ -392,6 +397,14 @@ DROP TABLE IF EXISTS community_schedule_entries CASCADE;
 >
 > **Cleanup komunitas:** karena semua FK `ON DELETE CASCADE` ke `communities(id)`, penghapusan komunitas otomatis membersihkan pengumuman, agenda, RSVP, dan exception. Konsisten dengan Rule 7 di RULES.
 
+### Migrasi susulan: `timezone` (2026-07-17)
+
+Migrasi nyata di repo: `internal/migrations/20260717080434_add_community_schedule_entry_timezone.up.sql`:
+```sql
+ALTER TABLE community_schedule_entries ADD COLUMN timezone VARCHAR(64) NOT NULL DEFAULT 'Asia/Jakarta';
+```
+Additive, backfill otomatis via `DEFAULT` — row lama tidak perlu migrasi data terpisah. Lihat §Catatan Occurrence & Recurrence untuk alasan kolom ini dibutuhkan.
+
 ---
 
 ## Enum Values
@@ -476,6 +489,7 @@ Bagian ini menegaskan cara occurrence dirakit (logika di service layer, bukan DB
 1. **Expand dibatasi window.** Endpoint kalender wajib menerima `from`/`to`. Untuk tiap entry recurring, expand `recurrence` (pakai library RRULE, mis. `github.com/teambition/rrule-go`) hanya dalam rentang itu. Recurring tanpa `UNTIL`/`COUNT` tetap aman karena dipotong window.
 
 2. **`occurrence_date` = DATE.** Waktu jam diambil dari `entries.start_at` (dan `all_day` bila true). Satu tanggal cukup untuk mengidentifikasi occurrence secara unik dalam satu entry.
+   - **Ditambahkan 2026-07-17**: kombinasi ulang `occurrence_date` + jam dari `start_at` WAJIB dilakukan di zona `entries.timezone` — `start_at` (TIMESTAMPTZ) selalu scan balik dari Postgres dengan Location UTC, jadi membaca komponen jamnya langsung (tanpa konversi eksplisit ke `entries.timezone` dulu) menghasilkan jam yang salah untuk entry dengan jam lokal yang menyebrang tengah malam UTC. Implementasi: `entry.StartAt.In(loc)` dulu baru ambil `.Hour()/.Minute()/.Second()`, bukan baca langsung dari `entry.StartAt` dalam Location aslinya.
 
 3. **Merge exception & RSVP.** Setelah dapat daftar occurrence:
    - Tandai `is_cancelled` bila ada exception `type='cancelled'` pada `(entry_id, occurrence_date)`, atau bila `entry.status='cancelled'`.

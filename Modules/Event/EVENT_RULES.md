@@ -182,6 +182,63 @@ Kedua opsi ini bisa dilakukan bersamaan — user bisa menyimpan ke jadwal in-app
 
 ---
 
+## Fitur Feedback Event (Angket)
+
+Setelah event berlangsung, user yang login bisa mengisi feedback (angket) singkat tentang event tersebut — untuk membantu organizer mendapat masukan dan menilai kualitas penyelenggaraan.
+
+### Siapa yang Bisa Mengisi?
+
+Semua user yang sudah login **bisa mengisi feedback**, kecuali **organizer event itu sendiri** — organizer tidak bisa memberi feedback untuk eventnya sendiri. Tidak masalah kalau user tersebut adalah Member Pro yang juga organizer event lain; batasannya per-event, bukan per-role.
+
+Guest (belum login) tidak bisa mengisi feedback.
+
+### Kapan Bisa Diisi?
+
+Feedback hanya bisa diisi **setelah event berlangsung** — begitu waktu mulai event (`event_date` + `event_time`, dihitung sesuai `timezone` event) sudah lewat. Sebelum itu, tombol feedback belum muncul.
+
+Ada juga **jendela waktu (window)** setelah event selesai — diatur superadmin lewat pengaturan platform (default 30 hari). Setelah window ini lewat, feedback baru tidak bisa lagi disubmit, tapi feedback yang sudah ada tetap tersimpan dan bisa dilihat.
+
+Feedback hanya berlaku untuk event berstatus **published** (termasuk yang sudah lewat tanggalnya). Event yang **dibatalkan** tidak bisa menerima feedback baru.
+
+### Apa yang Diisi?
+
+Formulir feedback berisi:
+
+| Field | Wajib? | Detail |
+|-------|--------|--------|
+| Rating keseluruhan | ✅ Wajib | Skala 1–5 |
+| Rating venue/lokasi | Opsional | Skala 1–5 |
+| Rating penyelenggaraan | Opsional | Skala 1–5 |
+| Rekomendasi | Opsional | Ya / Tidak — "Apakah kamu akan datang lagi ke event dari organizer ini?" |
+| Komentar | Opsional | Teks bebas, tunduk pada filter kata terlarang platform |
+| Kirim sebagai anonim | Opsional | Kalau diaktifkan, organizer tetap bisa baca isi feedback tapi tidak melihat identitas pengisi |
+
+### Aturan Submit & Edit
+
+- **Satu feedback per user per event** — tidak bisa submit dua kali untuk event yang sama.
+- User bisa **mengedit** atau **menghapus** feedback miliknya sendiri, selama masih dalam window waktu feedback.
+- Feedback yang sudah dihapus organizer/superadmin (moderasi) tidak bisa dikembalikan oleh user.
+
+### Siapa yang Bisa Melihat?
+
+| Siapa | Bisa Lihat Feedback? | Catatan |
+|-------|----------------------|---------|
+| Organizer (pemilik event) | ✅ Semua feedback event miliknya + ringkasan statistik | Tidak bisa lihat feedback event orang lain |
+| User biasa | ❌ Tidak | Feedback bukan konten publik — hanya milik sendiri yang bisa dilihat/diedit |
+| Superadmin | ✅ Semua feedback, event manapun | Untuk monitoring & moderasi dari backoffice |
+
+Organizer melihat ringkasan berupa rata-rata rating, persentase rekomendasi, dan distribusi rating (berapa banyak yang kasih 5, 4, 3, dst), selain daftar feedback satu per satu.
+
+### Notifikasi
+
+Organizer mendapat notifikasi setiap kali ada feedback baru masuk untuk eventnya (bisa dimatikan lewat preferensi notifikasi, sama seperti notifikasi event lainnya).
+
+### Moderasi
+
+Superadmin bisa menghapus feedback apapun dari backoffice — misalnya kalau isinya mengandung pelanggaran atau spam. Ini permanen (hard delete).
+
+---
+
 ## Use Cases Mobile
 
 Berikut skenario nyata bagaimana user berinteraksi dengan fitur event di aplikasi.
@@ -266,6 +323,24 @@ Eka membuka halaman Events. Ia memfilter event dengan tipe "Online" untuk mencar
 
 ---
 
+### Use Case 9 — User Isi Feedback Setelah Event Selesai
+
+**Siapa:** Doni, Member Standard (bukan organizer)
+**Kondisi:** Event "Futsal Tournament 2026" sudah selesai berlangsung kemarin
+
+Doni membuka event yang pernah ia jadwalkan, dan sekarang muncul banner "Bagaimana pengalamanmu di event ini?" beserta tombol "Isi Feedback". Ia memberi rating 5 untuk keseluruhan, 4 untuk venue, memilih "Ya" untuk rekomendasi, dan menulis komentar singkat "Acaranya seru, venue nyaman". Ia tidak mengaktifkan opsi anonim. Setelah tap "Kirim", feedback tersimpan dan tombol berubah jadi "Edit Feedback".
+
+---
+
+### Use Case 10 — Organizer Lihat Ringkasan Feedback
+
+**Siapa:** Andi, Member Pro (organizer)
+**Kondisi:** Event "Futsal Tournament 2026" sudah menerima 42 feedback
+
+Andi membuka halaman event miliknya dan masuk ke tab "Feedback". Ia melihat ringkasan: rata-rata rating 4.6 dari 5, 93% menjawab akan datang lagi, dan distribusi rating didominasi bintang 5. Di bawahnya, ia bisa scroll daftar feedback satu per satu — beberapa di antaranya dikirim sebagai anonim sehingga nama pengisi tidak muncul, tapi isi komentarnya tetap terlihat.
+
+---
+
 ## Ringkasan Aturan
 
 | Aturan | Detail |
@@ -281,6 +356,8 @@ Eka membuka halaman Events. Ia memfilter event dengan tipe "Online" untuk mencar
 | **Batalkan** | Bisa kapan saja selama event belum lewat |
 | **Bookmark** | Semua user yang sudah login |
 | **Jadwal & Kalender** | Semua user yang sudah login, bisa export ke kalender eksternal |
+| **Feedback (angket)** | Semua user login kecuali organizer event tsb, hanya setelah event berlangsung, dalam window waktu tertentu (default 30 hari) |
+| **Lihat feedback** | Organizer (event miliknya) & Superadmin (semua event) — bukan konten publik |
 
 ---
 

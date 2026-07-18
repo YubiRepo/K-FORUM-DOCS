@@ -66,6 +66,7 @@ Saat superadmin create atau edit event langsung dari backoffice, images tetap di
   "online_url": null,
   "event_date": "2026-06-15",
   "event_time": "14:00",
+  "timezone": "Asia/Jakarta",
   "category": {
     "id": "uuid",
     "name": "Sports"
@@ -108,6 +109,7 @@ Saat superadmin create atau edit event langsung dari backoffice, images tetap di
   "event_date": "2026-06-15",
   "event_end_date": null,
   "event_time": "14:00",
+  "timezone": "Asia/Jakarta",
   "registration_url": "https://eventbrite.com/e/futsal-2026",
   "organizer": {
     "id": "uuid",
@@ -130,8 +132,34 @@ Saat superadmin create atau edit event langsung dari backoffice, images tetap di
 }
 ```
 
+> `timezone`: IANA timezone identifier tempat event berlangsung (contoh: `Asia/Jakarta`, `Asia/Makassar`, `Asia/Jayapura`). Wajib diisi saat create/edit — dipakai untuk menghitung reminder dan export kalender dalam waktu absolut (UTC) yang benar.
 > Untuk event **online**: `venue_name` dan `venue_address` bernilai `null`, `online_platform` dan `online_url` diisi.
 > Untuk event **hybrid**: semua field venue dan online diisi.
+
+### 3. Event Feedback Object (Backoffice)
+
+```json
+{
+  "id": "uuid",
+  "event_id": "event_123",
+  "event_title": "Futsal Tournament 2026",
+  "user": {
+    "id": "uuid",
+    "name": "Doni Saputra",
+    "email": "doni@example.com"
+  },
+  "rating": 5,
+  "venue_rating": 4,
+  "organization_rating": 5,
+  "would_recommend": true,
+  "comment": "Acaranya seru banget, venue nyaman",
+  "is_anonymous": false,
+  "created_at": "2026-06-16T09:00:00.000Z",
+  "updated_at": "2026-06-16T09:00:00.000Z"
+}
+```
+
+> Superadmin selalu melihat identitas pengisi walaupun `is_anonymous: true` — anonim hanya menyembunyikan identitas dari organizer, bukan dari superadmin (untuk keperluan moderasi/audit trail).
 
 ---
 
@@ -199,6 +227,7 @@ Ambil semua events dengan filter lengkap — untuk management dan monitoring.
         "venue_name": "GOR Senayan",
         "venue_address": "Jl. Pintu I Senayan, Jakarta Pusat",
         "event_date": "2026-06-15",
+        "timezone": "Asia/Jakarta",
         "category": { "id": "uuid", "name": "Sports" },
         "organizer": {
           "id": "uuid",
@@ -219,6 +248,7 @@ Ambil semua events dengan filter lengkap — untuk management dan monitoring.
         "venue_name": null,
         "venue_address": null,
         "event_date": "2026-06-20",
+        "timezone": "Asia/Jakarta",
         "category": { "id": "uuid", "name": "Business" },
         "organizer": {
           "id": "uuid",
@@ -272,6 +302,7 @@ Ambil events yang menunggu approval — shortcut untuk review queue.
         "venue_name": "Hall A, ISTORA Senayan",
         "venue_address": "Jl. Pintu VI Senayan, Jakarta",
         "event_date": "2026-07-01",
+        "timezone": "Asia/Jakarta",
         "category": { "id": "uuid", "name": "Sports" },
         "organizer": {
           "id": "uuid",
@@ -321,6 +352,7 @@ Ambil detail lengkap satu event untuk review.
       "event_date": "2026-07-01",
       "event_end_date": "2026-07-03",
       "event_time": "09:00",
+      "timezone": "Asia/Jakarta",
       "registration_url": "https://eventbrite.com/e/basketball-cup",
       "organizer": {
         "id": "uuid",
@@ -487,6 +519,7 @@ Superadmin buat event langsung dari backoffice. Langsung published tanpa approva
     "event_date": "2026-08-01",
     "event_end_date": "2026-08-03",
     "event_time": "09:00",
+    "timezone": "Asia/Jakarta",
     "registration_url": "https://eventbrite.com/e/official-event-2026"
   }
   ```
@@ -504,6 +537,7 @@ Superadmin buat event langsung dari backoffice. Langsung published tanpa approva
   - `event_date`: Required, must be future date, format `YYYY-MM-DD`
   - `event_end_date`: Optional, must be >= `event_date`
   - `event_time`: Required, format `HH:mm`
+  - `timezone`: **Required** (mandatory, breaking change per 2026-07-17), string, must be a valid IANA timezone identifier (validated server-side via Go `time.LoadLocation`). Contoh nilai valid: `Asia/Jakarta`, `Asia/Makassar`, `Asia/Jayapura`. Dipakai untuk mengubah `event_date`+`event_time` (wall-clock lokal event) menjadi instant UTC absolut untuk reminder scheduling & calendar export
   - `registration_url`: Optional, valid URL
 
 - **Response (Success 201)**:
@@ -546,9 +580,12 @@ Superadmin edit event apapun statusnya.
     "venue_address": "Jl. Asia Afrika, Jakarta Pusat",
     "event_date": "2026-08-05",
     "event_time": "10:00",
+    "timezone": "Asia/Jakarta",
     "is_featured": true
   }
   ```
+
+  > `timezone` **wajib** dikirim juga saat edit (bukan hanya create) — sama seperti `event_date`/`event_time`, memakai IANA identifier (contoh: `Asia/Jakarta`, `Asia/Makassar`, `Asia/Jayapura`).
 
   > `is_featured` opsional di sini — toggle featured juga bisa lewat endpoint khusus (lihat section 10). Validasi soft-limit yang sama berlaku: kalau set `true` sementara sudah ada 10 event featured, response tetap sukses tapi disertai `warning`.
 
@@ -735,10 +772,17 @@ Superadmin configure pengaturan event module secara global.
       "reminder_times": ["1 week before", "3 days before", "1 day before"],
       "allow_comments": false,
       "max_images_per_event": 10,
-      "max_image_size_mb": 5
+      "max_image_size_mb": 5,
+      "feedback_enabled": true,
+      "feedback_window_days_after_event": 30,
+      "notify_organizer_on_feedback": true
     }
   }
   ```
+
+  > `feedback_enabled`: Master toggle fitur feedback/angket event. Kalau `false`, endpoint submit feedback mobile menolak request baru (`422`).
+  > `feedback_window_days_after_event`: Berapa hari setelah event berlangsung, feedback baru masih bisa disubmit/diedit. `0` berarti tanpa batas waktu.
+  > `notify_organizer_on_feedback`: Toggle notifikasi ke organizer setiap ada feedback baru masuk.
 
 - **Request Body PUT**:
   ```json
@@ -759,6 +803,90 @@ Superadmin configure pengaturan event module secara global.
       "updated_at": "2026-05-25T13:15:00.000Z"
     },
     "message": "Event module settings updated"
+  }
+  ```
+
+---
+
+### 14. List Event Feedback (Monitoring)
+
+Ambil semua feedback untuk satu event — buat monitoring & moderasi. Berbeda dari mobile, superadmin selalu melihat identitas pengisi walaupun dikirim sebagai anonim.
+
+- **URL**: `GET /api/v1/web/events/{event_id}/feedback`
+- **Autentikasi**: Yes (Superadmin)
+- **Query Parameters**:
+  - `rating` (optional): Filter by rating exact, `1`–`5`
+  - `is_anonymous` (optional): `true` / `false`
+  - `sort` (optional): `created_at`, `-created_at`, `rating`, `-rating` (default: `-created_at`)
+  - `limit` (optional, default: 20, max: 100)
+  - `offset` (optional, default: 0)
+
+- **Response (Success 200)**:
+  ```json
+  {
+    "data": [
+      {
+        "id": "feedback_123",
+        "event_id": "event_123",
+        "event_title": "Futsal Tournament 2026",
+        "user": {
+          "id": "uuid",
+          "name": "Doni Saputra",
+          "email": "doni@example.com"
+        },
+        "rating": 5,
+        "venue_rating": 4,
+        "organization_rating": 5,
+        "would_recommend": true,
+        "comment": "Acaranya seru banget, venue nyaman",
+        "is_anonymous": false,
+        "created_at": "2026-06-16T09:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "limit": 20,
+      "offset": 0,
+      "total": 42
+    },
+    "summary": {
+      "total_feedback": 42,
+      "average_rating": 4.6,
+      "recommend_percentage": 92.9
+    }
+  }
+  ```
+
+- **Response (Error — 404)**:
+  ```json
+  {
+    "message": "Event not found"
+  }
+  ```
+
+---
+
+### 15. Delete Event Feedback (Moderation)
+
+Hapus feedback secara permanen — dipakai kalau isinya melanggar guidelines atau spam.
+
+- **URL**: `DELETE /api/v1/web/events/{event_id}/feedback/{feedback_id}`
+- **Autentikasi**: Yes (Superadmin)
+
+- **Response (Success 200)**:
+  ```json
+  {
+    "message": "Feedback permanently deleted",
+    "data": {
+      "deleted_id": "feedback_123",
+      "deleted_at": "2026-06-20T09:00:00.000Z"
+    }
+  }
+  ```
+
+- **Response (Error — 404)**:
+  ```json
+  {
+    "message": "Feedback not found"
   }
   ```
 
@@ -805,7 +933,7 @@ Superadmin configure pengaturan event module secara global.
    │ Tipe: Offline                                       │
    │ Venue: Hall A, ISTORA Senayan                       │
    │ Alamat: Jl. Pintu VI Senayan, Jakarta               │
-   │ Date: 2026-07-01 s/d 2026-07-03, 09:00             │
+   │ Date: 2026-07-01 s/d 2026-07-03, 09:00 (Asia/Jakarta) │
    │ Registration: https://eventbrite.com/...            │
    │                                                     │
    │ Organizer: Budi Santoso (Pro Member)                │
@@ -874,6 +1002,9 @@ Superadmin configure pengaturan event module secara global.
 - ✅ Log semua approval/rejection actions (audit trail)
 - ✅ Featured adalah keputusan editorial — hanya event `published` yang boleh di-feature
 - ✅ Tampilkan warning di UI kalau featured melebihi 10 (soft limit, tidak diblok)
+- ✅ **`timezone` wajib diisi** (mandatory) saat create maupun edit event — IANA identifier seperti `Asia/Jakarta`, `Asia/Makassar`, atau `Asia/Jayapura`. Field ini menganchor `event_date`+`event_time` (wall-clock lokal) ke instant UTC absolut, dipakai untuk reminder scheduling & calendar export
+- ✅ Superadmin selalu melihat identitas pengisi feedback walaupun `is_anonymous: true` (audit trail) — organizer tidak
+- ✅ Hapus feedback yang melanggar guidelines lewat endpoint moderasi, permanen (hard delete)
 
 ### ❌ DON'T:
 - ❌ Jangan include `region_id` dalam request/response event
@@ -881,6 +1012,8 @@ Superadmin configure pengaturan event module secara global.
 - ❌ Jangan approve event tanpa review isi kontennya
 - ❌ Jangan reject tanpa memberikan reason yang jelas
 - ❌ Jangan set `is_featured` dari sisi organizer/member atau otomatis — selalu lewat Superadmin
+- ❌ **Breaking change (2026-07-17)**: Jangan omit `timezone` saat create/edit (termasuk dari backoffice) — request tanpa `timezone` akan ditolak `422` (`DOMAIN_EVENT_TIMEZONE_REQUIRED`). Client lama yang belum kirim field ini wajib update dulu sebelum create/edit event akan berhasil lagi
+- ❌ Jangan biarkan organizer melihat identitas pengisi feedback anonim — masking hanya berlaku di endpoint mobile organizer, bukan di endpoint backoffice
 
 ### Approval Authorization:
 
@@ -896,6 +1029,8 @@ Superadmin configure pengaturan event module secara global.
 | Delete event | ✅ | ❌ | Hard delete, irreversible |
 | Manage categories | ✅ | ❌ | |
 | Update settings | ✅ | ❌ | |
+| View event feedback | ✅ | ❌ | Semua event, termasuk identitas anonim |
+| Delete feedback | ✅ | ❌ | Hard delete, moderasi |
 
 ---
 
@@ -929,7 +1064,8 @@ Standard error responses:
   "message": "Validation failed",
   "errors": {
     "reason": ["Rejection reason is required"],
-    "event_date": ["Event date must be in the future"]
+    "event_date": ["Event date must be in the future"],
+    "timezone": ["Timezone is required and must be a valid IANA identifier (e.g. Asia/Jakarta)"]
   }
 }
 ```
@@ -940,10 +1076,14 @@ Standard error responses:
 | Reject tanpa reason | 422 | Validation failed |
 | venue_name kosong untuk offline event | 422 | Validation failed |
 | online_url kosong untuk online event | 422 | Validation failed |
+| `timezone` tidak dikirim saat create/edit | 422 | Validation failed (`DOMAIN_EVENT_TIMEZONE_REQUIRED`) |
+| `timezone` bukan IANA identifier valid (gagal `time.LoadLocation`) | 422 | Validation failed (`DOMAIN_EVENT_TIMEZONE_INVALID`) |
 | Event not found | 404 | Invalid event_id |
 | Non-superadmin access | 403 | Authorization failed |
 | Image upload > 5 files | 422 | Upload limit per request |
 | Delete published event | 200 | Hard delete, tapi warning dulu di UI |
+| Feedback event tidak ditemukan | 404 | Invalid event_id |
+| Feedback (individual) tidak ditemukan | 404 | Invalid feedback_id |
 
 ---
 

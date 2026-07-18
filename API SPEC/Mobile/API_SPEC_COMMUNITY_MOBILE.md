@@ -121,6 +121,22 @@ Berdasarkan `COMMUNITY_RULES.md` dan `COMMUNITY_DB_SCHEMA.md`.
 | `upcoming_schedule.all_day` | boolean | No | Penanda agenda seharian |
 | `upcoming_schedule.my_response` | enum | Yes | `going` \| `maybe` \| `not_going` \| `null` |
 
+> **Catatan timezone (2026-07-17):** `upcoming_schedule.start_at`/`end_at` sudah
+> instant absolut yang benar (RFC3339 dengan `Z`) — tidak perlu field timezone
+> tambahan di objek preview ini. Yang berubah ada di sisi backend: setiap
+> `community_schedule_entries` sekarang wajib punya field `timezone` eksplisit
+> (dipilih creator manual saat create, opsional saat edit — fallback ke nilai
+> lama kalau di-omit — IANA identifier) untuk merekonstruksi occurrence dengan
+> benar. Sebelumnya ada bug di mana agenda dengan jam lokal yang menyebrang
+> tengah malam UTC (mis. 03:00 WIB) bisa salah hari/jam saat di-generate ulang.
+> Endpoint create/edit/RSVP/cancel-occurrence schedule (11 route mobile, lihat
+> `router.go`) **tidak** didokumentasikan di file ini maupun di folder
+> `API SPEC/` manapun — kontraknya ada di
+> `K-FORUM-DOCS/Modules/Community/API_SPEC_COMMUNITY_ANNOUNCEMENT_SCHEDULE_MOBILE.md`
+> (di luar struktur folder `API SPEC/`, jadi mudah terlewat kalau cuma
+> menyusuri `API SPEC/Mobile/`) — field `timezone` yang baru sudah ditambahkan
+> ke situ.
+
 ### CommunityDetailObject
 ```json
 {

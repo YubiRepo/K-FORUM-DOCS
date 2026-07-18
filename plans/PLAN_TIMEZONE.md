@@ -237,6 +237,20 @@ Menyentuh domain Auth (`internal/domain/user`) — Google bukan field scalar, di
 
 ## Fase 7a — Event & Reminder: normalisasi ke UTC (absolute instant)
 
+> **SUPERSEDED (2026-07-17)** — bagian anchor "timezone device organizer" di
+> fase ini **tidak jadi dipakai**. Setelah didesain ulang, organizer wajib
+> pilih timezone eksplisit (bukan diam-diam diambil dari device) karena
+> device organizer cuma proxy "device-nya ada di mana", bukan "event-nya
+> terjadi di mana" — dua hal itu bisa beda (organizer bikin event di Jakarta
+> sambil device-nya lagi di luar negeri). Migration shape (kolom
+> `starts_at_utc`/`ends_at_utc`, backfill `Asia/Jakarta`) tetap dipakai apa
+> adanya, cuma sumber anchor-nya yang berubah. Implementasi lengkap + hasil
+> test ada di [[K-FORUM-DOCS/plans/PLAN_TIMEZONE_WALLCLOCK_INPUTS.md]] —
+> baca itu sebagai sumber kebenaran terbaru untuk Event, bukan bagian di
+> bawah ini.
+
+
+
 **Prinsip:** event punya satu momen nyata yang tetap, siapa pun yang lihat. Timezone device **organizer** (bukan device semua penonton) cuma dipakai **sekali**, saat create/update, untuk menerjemahkan input wall-clock mereka ke instant UTC yang benar. Setelah itu, evaluasi "apakah reminder harus fire sekarang" murni perbandingan UTC vs UTC — tidak butuh timezone siapa pun lagi saat runtime.
 
 Kondisi sekarang: `events.event_date DATE` + `events.event_time VARCHAR(5)` (`internal/migrations/0005_create_event_tables.up.sql:30,32`), digabung lewat `combineDateAndTime()` (`internal/app/usecase/event/helpers.go:265`) yang selalu mengasumsikan `jakartaLocation` — dipakai di `schedule_event.go:104` (bikin `scheduled_job` reminder) dan `get_calendar_export.go:39,45` (ekspor ICS).
@@ -249,6 +263,14 @@ Kondisi sekarang: `events.event_date DATE` + `events.event_time VARCHAR(5)` (`in
 
 ## Fase 7b — DND: dari hardcoded WIB ke lookup dinamis per-user
 
+> **SELESAI (2026-07-17)** — diimplementasikan persis sesuai draft di bawah
+> (device recipient aktif terakhir → fallback `default_timezone` → fallback
+> Asia/Jakarta), dengan satu penyesuaian: `NowInJakarta()` dihapus total
+> (bukan didampingi) karena tidak ada lagi pemanggil yang butuh versi
+> hardcoded-nya. Detail implementasi + hasil test ada di
+> [[K-FORUM-DOCS/plans/PLAN_TIMEZONE_WALLCLOCK_INPUTS.md]] §Fase 7b — baca
+> itu sebagai sumber kebenaran terbaru, bukan bagian draft di bawah ini.
+
 **Prinsip:** window DND ("22:00–08:00") adalah **rule wall-clock berulang**, bukan instant — jadi **field-nya TETAP tersimpan sebagai string wall-clock, TIDAK dikonversi ke UTC**. Yang berubah cuma: zona yang dipakai untuk membaca "jam berapa sekarang" jadi dinamis per-user (device aktifnya), bukan hardcode `Asia/Jakarta`. Ini yang paling berisiko karena bentuknya paling mirip insiden lama — dieksekusi terakhir, setelah 7a stabil.
 
 - `internal/domain/notification/service/module_preference_gate.go`: `NowInJakarta()` (baris 34) diganti/didampingi `NowInUserTimezone(ctx, userID string) time.Time` yang lookup `device_registrations` aktif terakhir user → fallback `default_timezone` system setting → fallback `Asia/Jakarta` (perilaku sekarang kalau semua lookup gagal — **tidak pernah lebih buruk dari kondisi sekarang**).
@@ -259,6 +281,22 @@ Kondisi sekarang: `events.event_date DATE` + `events.event_time VARCHAR(5)` (`in
 - **Rollout**: jalankan di belakang flag/percobaan bertahap kalau memungkinkan (mis. aktifkan dulu untuk notifikasi non-krusial, pantau sebelum full rollout) — mengingat riwayat insiden sebelumnya persis di area ini.
 
 ## Fase 7c (opsional, belum digarap) — Community Schedule (RRULE)
+
+> **SELESAI (2026-07-17), asumsi draft ini TERBUKTI SALAH di dua hal**: (1)
+> modul yang benar adalah `internal/domain/community` (bukan
+> `internal/domain/schedule`, yang ternyata fitur lain sama sekali —
+> "schedule entry types" di web, tidak ada hubungannya); (2) recurrence
+> RRULE-nya **sudah** diimplementasikan (subset FREQ=DAILY/WEEKLY/MONTHLY +
+> BYDAY, live & routed, 11 test passing) — bukan "kelihatannya belum
+> diimplementasikan penuh" seperti dugaan di sini. Anchor timezone yang
+> dipakai juga BEDA dari draft di bawah: bukan `device_registrations.timezone`
+> milik CREATOR (device-inferred), tapi **field `timezone` eksplisit wajib**
+> tersimpan di `community_schedule_entries` itu sendiri (creator pilih
+> manual, sama pola dengan Event Fase 7a) — device cuma prefill UI. Detail
+> lengkap + bug rekonstruksi wall-clock yang ditemukan (dan jebakan fix yang
+> hampir salah) ada di
+> [[K-FORUM-DOCS/plans/PLAN_TIMEZONE_WALLCLOCK_INPUTS.md]] §Fase 7c — baca
+> itu sebagai sumber kebenaran terbaru, bukan catatan draft di bawah ini.
 
 Modul `internal/domain/schedule` **belum punya konsep timezone sama sekali** (field `Location` yang ada cuma teks venue). Karena recurrence RRULE-nya sendiri kelihatannya belum diimplementasikan penuh, ini di level catatan saja: kalau nanti dibangun, anchor timezone-nya bisa langsung pakai pola yang sama dengan 7b (`device_registrations.timezone` aktif terakhir → `default_timezone` → fallback) sejak awal, tanpa utang seperti DND. Butuh eksplorasi & plan terpisah saat fitur recurrence-nya digarap.
 
