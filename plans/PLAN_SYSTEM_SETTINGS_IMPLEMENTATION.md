@@ -87,7 +87,7 @@ Legend kolom **Status**: `[ ]` belum disentuh · `[~]` sebagian (ada bug/gap) ·
 
 | Key | Status | Catatan |
 |---|---|---|
-| `maintenance_mode_enabled` / `maintenance_message` | [~] | Middleware jalan benar untuk `protectedMobile`, TAPI endpoint publik mobile non-`/config` (legal, ads publik, subscription plans) tidak ter-gate — guest tetap 200 saat maintenance aktif. Tidak ada audit log aktivasi/deaktivasi (spec wajib) |
+| `maintenance_mode_enabled` / `maintenance_message` | [x] (2026-07-19) | Semua endpoint mobile non-`/config` sekarang ter-gate (termasuk `mobileAuth`, legal, subscription plans, ads publik, home insights, news publik) — 503 untuk guest/member, bypass usergod/superadmin, `/config` & `/health` tetap hidup. Aktivasi/deaktivasi (dan perubahan setting lain) sekarang tercatat di `system_settings_audit_log`. Detail arsitektur & keputusan di section khusus di bawah |
 
 ## Group: `contact`
 
@@ -113,7 +113,7 @@ Legend kolom **Status**: `[ ]` belum disentuh · `[~]` sebagian (ada bug/gap) ·
 | Permission `manage_system_settings`/`manage_legal_documents` | [ ] | Ter-seed tapi route pakai `RequireRole`, permission ini tidak pernah dicek |
 | `editable_by` (usergod vs superadmin) | [x] backend / [ ] frontend | Backend benar (`update_settings.go`); frontend `GroupForm.vue` punya `ENFORCE_EDITABLE_BY=false` (TODO) |
 | Validasi per-key khusus (semver, timezone, dll) | [~] | `default_timezone` sudah (IANA validation di `update_settings.go`) — key lain (semver versi app, `default_language` vs `system_languages`, dll) belum |
-| Audit log perubahan setting | [ ] | Tidak ada sama sekali untuk key apa pun |
+| Audit log perubahan setting | [~] (2026-07-19) | `system_settings_audit_log` tercatat untuk setiap `UpdateSettingsUseCase`/`ToggleMaintenanceUseCase` (semua key, bukan cuma maintenance) — lihat section `maintenance_mode_enabled` di bawah. Transisi status legal document version (publish/archive) BELUM disentuh — masih di luar scope sesi ini |
 
 ---
 
@@ -181,3 +181,43 @@ Karena `banned_keywords` sekarang dibaca di ~20 titik submit-konten per request,
 ### Verifikasi yang sudah dijalankan
 
 `go build ./...`, `go vet ./...` bersih. Test baru: `internal/domain/moderation/service` (unit test matcher), `internal/app/service/moderation` (unit test checker — fail-open, no-match, match, regresi "harus panggil GetAll bukan GetPublic"), `internal/interfaces/http/handler/web/system_settings_handler_test.go` (validasi banned_keywords invalid/valid), 3 handler test representatif (`TestMobileCommunity_CreatePost_BannedKeyword`, `TestMobileQna_SubmitQuestion_BannedKeyword`, `TestMobileNews_PostComment_BannedKeyword`). Full suite (`mobile`, `web`, `domain/...`, `app/...`) tetap hijau setelah seluruh wiring 6 modul.
+
+---
+
+## `maintenance_mode_enabled` / `maintenance_message` — gating penuh + audit log (2026-07-19)
+
+### Gap yang ditemukan (audit 2026-07-07, sebelum sesi ini)
+
+`middleware.MaintenanceGate` (`internal/interfaces/http/middleware/maintenance.go`) sudah benar secara logic (baca `maintenance_mode_enabled`/`maintenance_message` via `SystemSettingsProvider.GetAll`, fail-open kalau settings gagal dibaca, bypass role `usergod`/`superadmin`, 503 + body `{"maintenance":true,"message":...}` untuk yang lain) — TAPI hanya **dipasang satu kali**, di grup `protectedMobile` (`internal/interfaces/http/router/router.go`). Semua grup mobile publik lain luput sama sekali: `mobileAuth` (register/login/OTP/refresh/password), `/legal/:doc_type`, `/subscription/plans`, `mobileAdsPublic` (`/ads`, `/ads/home`, impression/click), `mobileHome` (weather/exchange-rates), `mobileNewsPublic` (articles/categories/scopes/comments). Guest tetap dapat 200 dari semua endpoint itu walau admin sudah mengaktifkan maintenance mode. Tidak ada audit log sama sekali untuk perubahan setting apa pun (bukan cuma maintenance).
+
+### Keputusan: `mobileAuth` (login/register/OTP) ikut di-gate
+
+`SYSTEM_SETTINGS_RULES.md` §Maintenance Mode eksplisit: *"Guest & Member (mobile/API) | Semua endpoint return 503"* — hanya `GET /mobile/config`, `GET /health`, dan auth backoffice yang dikecualikan. Tidak ada pengecualian untuk mobile login/register. Diputuskan untuk ikut menggerbang `mobileAuth` (bukan cuma 3 kelompok yang disebut di audit awal: legal/ads/subscription-plans) supaya benar-benar sesuai spec "semua endpoint", bukan cuma menutup 3 gap yang kebetulan ditemukan duluan. Backoffice (`/web/auth/*`) TIDAK disentuh — itulah jalur usergod/superadmin tetap bisa masuk untuk mematikan maintenance mode, sesuai catatan spec "agar bisa mematikan maintenance mode dari backoffice".
+
+### Implementasi gating
+
+- `internal/interfaces/http/router/router.go` — `middleware.MaintenanceGate(sysSettingsProvider)` ditambahkan ke: `mobileAuth` group, grup baru `mobilePublicGated` (menaungi `/legal/:doc_type` dan `/subscription/plans`, sebelumnya route langsung di `mobile` group), `mobileAdsPublic`, `mobileHome`, `mobileNewsPublic`. `GET /mobile/config` sengaja TIDAK disentuh (harus tetap hidup — mobile app butuh endpoint ini untuk tahu status maintenance itu sendiri).
+- Middleware `MaintenanceGate` sendiri TIDAK diubah — hanya titik pemasangannya yang diperluas.
+
+### Bug test-infra yang ditemukan & diperbaiki: `noopSystemSettingsProvider`
+
+Saat menulis test untuk verifikasi gating, ditemukan `internal/testhelper/testserver.go` menyuntik `noopSystemSettingsProvider{}` (selalu return empty map) ke `middleware.MaintenanceGate` di router test — **terpisah dari** provider Postgres asli (`sysSettingsRepo`) yang dipakai untuk usecase settings lain. Akibatnya `MaintenanceGate` **selalu fail-open di seluruh test suite**, termasuk untuk `protectedMobile` yang sudah lama ter-gate di production — gap ini sudah ada sejak sebelum sesi ini dan membuat gating maintenance tidak pernah benar-benar teruji. Diperbaiki: `sysSettings` di `MustStartTestServer`/`buildRouter` sekarang memakai `sysSettingsRepo` (Postgres langsung, sama seperti yang dipakai `systemUseCases.Provider`) bukan noop. Type `noopSystemSettingsProvider` (beserta importnya) dihapus dari `internal/testhelper/noop.go` karena sudah tidak ada pemakai. Fix ini murni test-infra — tidak mengubah behavior production sama sekali (default `maintenance_mode_enabled=false` di kedua kasus menghasilkan pass-through yang sama).
+
+### Audit log — tabel baru `system_settings_audit_log`
+
+Spec (`SYSTEM_SETTINGS_RULES.md` §Maintenance Mode: *"Aktivasi/deaktivasi tercatat di Audit Log dengan prioritas tinggi"*, §Audit & Keamanan: *"Setiap perubahan setting ... masuk Audit Log: actor_id, setting_key, old_value, new_value, timestamp, ip"*) mensyaratkan audit log untuk maintenance toggle secara eksplisit, dan untuk SEMUA perubahan setting secara umum. Karena `maintenance_mode_enabled`/`maintenance_message` bisa diubah lewat DUA jalur — `POST /web/system-settings/maintenance/toggle` (`ToggleMaintenanceUseCase`) DAN `PATCH /web/system-settings` generik (`UpdateSettingsUseCase`, yang tidak membatasi key apa pun) — audit ditulis di kedua usecase sekaligus, bukan cuma di endpoint toggle, supaya tidak ada jalur bypass yang luput dari audit.
+
+- Migration baru `internal/migrations/20260719104143_create_system_settings_audit_log.up.sql` — tabel `system_settings_audit_log(id, actor_id, setting_key, old_value, new_value, ip_address, created_at)`, mengikuti pola persis `user_audit_logs` (migration `0015_usermanagement_additions.up.sql`) tapi tanpa kolom `actor_role`/`target_type`/`target_id`/`notes` (tidak relevan untuk setting key-value).
+- Domain: `internal/domain/system/entity/settings_audit_log.go` (`SettingsAuditLog` + `NewSettingsAuditLog`, immutable), `internal/domain/system/repository/interfaces.go` (`SettingsAuditLogRepository.Save`), error code baru di `internal/domain/system/constant/system_constant.go`.
+- Infra: `internal/infrastructure/persistence/postgres_system_settings_audit_log_repository.go` (`PostgresSettingsAuditLogRepository`).
+- Usecase: `writeSettingsAuditLogs()` helper (di `internal/app/usecase/system/toggle_maintenance.go`, dipakai juga oleh `update_settings.go`) menulis satu row per key yang berubah, best-effort (gagal tidak menggagalkan operasi utama). Nilai untuk setting `is_sensitive=true` dimask jadi literal `"***"` di kolom `old_value`/`new_value` (bukan algoritma mask prefix/suffix yang dipakai `SystemSetting.MaskedValue()` — cukup untuk audit trail, tidak perlu presisi yang sama dengan response list). `clientIP` (`c.ClientIP()`) di-thread dari handler (`system_settings_handler.go`) ke kedua usecase sebagai parameter baru.
+- Wiring: `Dependencies.AuditLogRepo` baru di `internal/app/usecase/system/use_cases.go`; `cmd/app/main.go` dan `internal/testhelper/testserver.go` mengkonstruksi `PostgresSettingsAuditLogRepository` dan mengoper ke `systemUsecase.Dependencies`.
+
+### Yang BELUM disentuh (di luar scope sesi ini)
+
+- Audit log untuk transisi status legal document version (publish/archive) — masih pakai jalur lama tanpa audit trail terpisah (row cross-cutting tetap `[~]`, bukan `[x]`).
+- `report_auto_flag_threshold`/`report_rate_limit_per_day` (modul Reporting) dan seluruh key group lain yang masih `[ ]`/`[~]` di tabel utama — tidak disentuh.
+
+### Verifikasi yang sudah dijalankan
+
+`go build ./...`, `go vet ./...` bersih. Test baru: `internal/interfaces/http/handler/mobile/maintenance_gate_test.go` (`TestMobileMaintenanceGate_BlocksPublicRoutes` — 8 subtest per route yang baru di-gate termasuk `mobileAuth`, `TestMobileMaintenanceGate_ConfigStaysAlive`, `TestMobileMaintenanceGate_DisabledAllowsPublicRoutes`), 2 test baru di `internal/interfaces/http/handler/web/system_settings_handler_test.go` (`TestWebSystemSettings_ToggleMaintenance_WritesAuditLog`, `TestWebSystemSettings_UpdateSettings_WritesAuditLog` — assert row masuk ke `system_settings_audit_log`). Full suite `internal/interfaces/http/handler/mobile/...` dan `internal/interfaces/http/handler/web/...` (bukan cuma yang baru) tetap hijau setelah fix noop provider — mengonfirmasi tidak ada regresi dari mengaktifkan gate yang sebelumnya selalu no-op di test.

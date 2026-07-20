@@ -49,7 +49,7 @@ something else. No explicit field needed there; see Fase 7b below.
 | Event (`event_date`+`event_time`) | WALLCLOCK-OWNER | **DONE** (this doc) — see below |
 | DND (notification quiet hours) | WALLCLOCK-OWNER (device, not field) | **DONE** (2026-07-17) — see [Fase 7b](#fase-7b-dnd--done-2026-07-17) |
 | Community schedule occurrence (`community_schedule_entries`) | WALLCLOCK-OWNER | **DONE** (2026-07-17) — see [Fase 7c](#fase-7c-community-schedule-occurrence--done-2026-07-17) |
-| Ads (`start_date`/`end_date` "active today") | WALLCLOCK-PLATFORM | **NOT STARTED** |
+| Ads (`start_date`/`end_date` "active today") | WALLCLOCK-PLATFORM | **DONE** (2026-07-20) — see [Fase 7d](#fase-7d-ads--done-2026-07-20) |
 | Directory business hours (JSONB, per-merchant) | WALLCLOCK-OWNER | **NOT STARTED** |
 | `created_at`/`updated_at`/other instants | ABSOLUTE | Out of scope, verified correct |
 | `birth_date`, `refund_date`, `effective_date`, `transaction_date`, subscription periods | ABSOLUTE | Out of scope, verified correct |
@@ -479,15 +479,77 @@ the row without an explicit value) — locks in the new field. Full repo
 test suite re-verified green (isolated per-package + sequential `-p 1`
 full run) after this addendum.
 
+## Fase 7d — Ads — DONE (2026-07-20)
+
+**Confirmed public, untargeted ad serving** — Ads has no per-advertiser or
+per-region scoping (unlike Event/Directory, which are tied to a specific
+venue/store). Every ad is shown to the entire user base identically, so
+"is this campaign active today" has exactly one relevant wallclock for the
+whole platform — `default_timezone` — not a per-row field. This confirms the
+WALLCLOCK-PLATFORM classification from the original scoping pass.
+
+**Bug**: `postgres_ads_query.go` answered "what is today" 3 mutually
+inconsistent ways in the same file: `GetHomeAds` bound
+`time.Now().Truncate(24h)` (Go-process-local, effectively UTC on this infra)
+as a SQL parameter; `ListActive`'s main list used the same value but
+string-interpolated via `fmt.Sprintf` into a `'YYYY-MM-DD'::date` literal;
+`ListActive`'s own slider sub-query (same method, same response) used a bare
+`CURRENT_DATE` (Postgres session TZ). Around UTC midnight (07:00 WIB), a
+single `/mobile/ads` response could show the main list and the slider
+disagreeing on which ads count as expired.
+
+### What changed
+
+- **`internal/app/usecase/ads/helpers.go`**: new `resolveAdsToday(ctx,
+  provider port.SystemSettingsProvider) string` — reads `default_timezone`
+  via `provider.GetAll()` (same map-lookup + `AsString()` shape as
+  `ResolveDefaultTimezone` in the Notification dispatcher, not reused
+  directly since that lives in `app/service/notification`, an
+  application-layer package persistence/other-module usecases shouldn't
+  import), resolves it through `sysvo.NewPlatformTimezone`, falls back to
+  `sysvo.DefaultPlatformTimezone()` (`Asia/Jakarta`) on any missing/invalid
+  value, and returns `.Now().Format("2006-01-02")` — a plain civil-date
+  string, not a `time.Time`, so it can only ever be bound as a SQL parameter,
+  never re-interpreted through some other Location by accident.
+- **`internal/app/port/ads_query_model.go`**: `AdQueryReadModel.GetHomeAds`
+  gained a `today string` parameter; `AdActiveListReadQuery` gained a
+  `Today string` field. Both usecases (`get_home_ads.go`,
+  `list_active_ads.go`) now call `resolveAdsToday` once per request and pass
+  the same value through — this is what guarantees the main list and the
+  slider in one `ListActive` response can no longer disagree.
+- **`internal/infrastructure/persistence/postgres_ads_query.go`**: all 3
+  techniques replaced with the same pattern — bind the caller-supplied
+  `today` string as a parameter and cast with `$N::date` in the query text
+  (a static cast on a placeholder, not a literal interpolation). `GetHomeAds`
+  no longer calls `time.Now()` at all; `ListActive`'s `fmt.Sprintf` date
+  literal and its slider's `CURRENT_DATE` are both gone.
+- **DI**: `ads.Dependencies` gained `SystemSettings port.SystemSettingsProvider`,
+  threaded into `NewGetHomeAdsUseCase`/`NewListActiveAdsUseCase`. Wired from
+  the already-existing `sysSettingsProvider` in `cmd/app/main.go` and
+  `sysSettingsRepo` in `internal/testhelper/testserver.go` (both already
+  satisfied the interface for other modules — no new provider construction
+  needed).
+
+### Verification
+
+- New `internal/app/usecase/ads/helpers_test.go`:
+  `TestResolveAdsToday_FollowsDefaultTimezoneNotFixedZone` (Tokyo setting →
+  result matches an independently-computed `PlatformTimezone("Asia/Tokyo").Now()`,
+  proving the mechanism actually resolves through the configured zone) and
+  `TestResolveAdsToday_FallbackChain` (nil provider, provider error, missing
+  setting key, invalid timezone string — all 4 fall back to Asia/Jakarta).
+  Wall-clock itself can't be faked here (no clock injection point in this
+  helper), so these tests validate the resolution mechanism rather than a
+  specific frozen instant — same limitation/approach as the DND fix's
+  `TestNowInUserTimezone_FallbackChain`.
+- `go build ./...` / `go vet ./...` clean.
+- Full `go test ./internal/interfaces/http/handler/mobile/...` (62s) and
+  `.../web/...` (19s) green, no regressions — existing
+  `TestMobileAds_GetHomeAds_Success` / `TestMobileAds_ListActiveAds_Success`
+  continue to pass against the new signature.
+
 ## Not yet scoped in detail (flagged, not designed)
 
-- **Ads** `start_date`/`end_date` "is this campaign active today" —
-  confirmed 3 mutually inconsistent techniques in one file
-  (`postgres_ads_query.go`): Go-side `time.Now().Truncate(24h)` as a bound
-  param, the same value string-interpolated via `fmt.Sprintf` into a SQL
-  literal, and a bare `CURRENT_DATE` (Postgres session TZ) — all three
-  answering the same question differently. Decision: unify behind one
-  `default_timezone`-anchored "today" helper. Not implemented yet.
 - **Directory business hours** — `internal/app/usecase/directory/hours_helper.go`'s
   `isOpenNow` calls `time.Now()` with **zero** timezone conversion at all
   (not even Jakarta) — a plain bug, not merely an inconsistency. Decision:
