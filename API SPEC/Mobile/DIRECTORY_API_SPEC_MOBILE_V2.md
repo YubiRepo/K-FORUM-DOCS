@@ -1,4 +1,4 @@
-# API Spec — Directory Module (Mobile Client) v2.0
+# API Spec — Directory Module (Mobile Client) v2.1
 
 Dokumentasi lengkap API endpoint Directory module untuk aplikasi mobile Flutter.
 
@@ -35,69 +35,72 @@ Dokumentasi lengkap API endpoint Directory module untuk aplikasi mobile Flutter.
 
 ### HTTP Status Codes
 
-| Code | Meaning |
-|------|---------|
-| 200 | OK |
-| 201 | Created |
-| 204 | No Content (delete) |
-| 400 | Bad Request |
-| 401 | Unauthorized |
-| 403 | Forbidden (kurang permission) |
-| 404 | Not Found |
-| 409 | Conflict (duplicate) |
-| 422 | Validation Error |
-| 500 | Internal Server Error |
+| Code | Meaning                       |
+| ---- | ----------------------------- |
+| 200  | OK                            |
+| 201  | Created                       |
+| 204  | No Content (delete)           |
+| 400  | Bad Request                   |
+| 401  | Unauthorized                  |
+| 403  | Forbidden (kurang permission) |
+| 404  | Not Found                     |
+| 409  | Conflict (duplicate)          |
+| 422  | Validation Error              |
+| 500  | Internal Server Error         |
 
 ---
 
 ## ENDPOINT INDEX
 
-| # | Method | Path | Auth | Akses |
-|---|--------|------|------|-------|
-| **MEDIA** | | | | |
-| 1 | POST | `/media/upload` | ✅ | Member Pro |
-| **COMPANY** | | | | |
-| 2 | GET | `/company` | ✅ | Member Pro |
-| 3 | POST | `/company` | ✅ | Member Pro |
-| 4 | GET | `/company/{id}` | ✅ | Member Pro (owner) |
-| 5 | PUT | `/company/{id}` | ✅ | Member Pro (owner) |
-| 6 | DELETE | `/company/{id}` | ✅ | Member Pro (owner) |
-| **MERCHANT — Owner** | | | | |
-| 7 | POST | `/merchant` | ✅ | Member Pro |
-| 8 | GET | `/me/merchant` | ✅ | Member Pro |
-| 9 | GET | `/merchant/{id}/manage` | ✅ | Member Pro (owner) |
-| 10 | PUT | `/merchant/{id}` | ✅ | Member Pro (owner) |
-| 11 | POST | `/merchant/{id}/publish` | ✅ | Member Pro (owner) |
-| 12 | POST | `/merchant/{id}/archive` | ✅ | Member Pro (owner) |
-| 13 | POST | `/merchant/{id}/unarchive` | ✅ | Member Pro (owner) |
-| 14 | DELETE | `/merchant/{id}` | ✅ | Member Pro (owner) |
-| **MERCHANT — Public** | | | | |
-| 15 | GET | `/merchant` | Optional | All |
-| 16 | GET | `/merchant/{id}` | Optional | All |
-| **ITEMS** | | | | |
-| 17 | GET | `/merchant/{id}/item` | Optional | All |
-| 18 | GET | `/merchant/{id}/item/{item_id}` | Optional | All |
-| 19 | POST | `/merchant/{id}/item` | ✅ | Member Pro (owner) |
-| 20 | PUT | `/merchant/{id}/item/{item_id}` | ✅ | Member Pro (owner) |
-| 21 | DELETE | `/merchant/{id}/item/{item_id}` | ✅ | Member Pro (owner) |
-| 22 | PUT | `/merchant/{id}/item/reorder` | ✅ | Member Pro (owner) |
-| **REVIEWS** | | | | |
-| 23 | GET | `/merchant/{id}/review` | Optional | All |
-| 24 | POST | `/merchant/{id}/review` | ✅ | Any member |
-| 25 | PUT | `/merchant/{id}/review` | ✅ | Reviewer (own) |
-| 26 | POST | `/review/{review_id}/vote` | ✅ | Any member |
-| **FAVORITES** | | | | |
-| 27 | GET | `/me/saved` | ✅ | Any member |
-| 28 | POST | `/merchant/{id}/save` | ✅ | Any member |
-| 29 | DELETE | `/merchant/{id}/save` | ✅ | Any member |
-| **INQUIRIES** | | | | |
-| 30 | POST | `/merchant/{id}/inquiry` | ✅ | Any member |
-| 31 | GET | `/me/inquiry` | ✅ | Any member |
-| 32 | GET | `/merchant/{id}/inquiry` | ✅ | Owner |
-| 33 | POST | `/merchant/{id}/inquiry/{inq_id}/reply` | ✅ | Owner |
-| 34 | POST | `/merchant/{id}/inquiry/{inq_id}/close` | ✅ | Owner |
-| **CATEGORIES** | | | | |
-| 35 | GET | `/categories` | Optional | All |
+| #                     | Method | Path                                    | Auth     | Akses              |
+| --------------------- | ------ | --------------------------------------- | -------- | ------------------ |
+| **MEDIA**             |        |                                         |          |                    |
+| 1                     | POST   | `/media/upload`                         | ✅        | Member Pro         |
+| **COMPANY**           |        |                                         |          |                    |
+| 2                     | GET    | `/company`                              | ✅        | Member Pro         |
+| 3                     | POST   | `/company`                              | ✅        | Member Pro         |
+| 4                     | GET    | `/company/{id}`                         | ✅        | Member Pro (owner) |
+| 5                     | PUT    | `/company/{id}`                         | ✅        | Member Pro (owner) |
+| 6                     | DELETE | `/company/{id}`                         | ✅        | Member Pro (owner) |
+| **MERCHANT — Owner**  |        |                                         |          |                    |
+| 7                     | POST   | `/merchants`                             | ✅        | Member Pro         |
+| 8                     | GET    | `/me/merchants`                          | ✅        | Member Pro         |
+| 9                     | GET    | `/merchants/{id}/manage`                 | ✅        | Member Pro (owner) |
+| 10                    | PUT    | `/merchants/{id}`                        | ✅        | Member Pro (owner) |
+| 11                    | POST   | `/merchants/{id}/publish`                | ✅        | Member Pro (owner) |
+| 12                    | POST   | `/merchants/{id}/archive`                | ✅        | Member Pro (owner) |
+| 13                    | POST   | `/merchants/{id}/unarchive`              | ✅        | Member Pro (owner) |
+| 14                    | DELETE | `/merchants/{id}`                        | ✅        | Member Pro (owner) |
+| **MERCHANT — Public** |        |                                         |          |                    |
+| 15                    | GET    | `/merchants`                             | Optional | All                |
+| 16                    | GET    | `/merchants/{id}`                        | Optional | All                |
+| **ITEMS**             |        |                                         |          |                    |
+| 17                    | GET    | `/merchants/{id}/item`                   | Optional | All                |
+| 18                    | GET    | `/merchants/{id}/item/{item_id}`         | Optional | All                |
+| 19                    | POST   | `/merchants/{id}/item`                   | ✅        | Member Pro (owner) |
+| 20                    | PUT    | `/merchants/{id}/item/{item_id}`         | ✅        | Member Pro (owner) |
+| 21                    | DELETE | `/merchants/{id}/item/{item_id}`         | ✅        | Member Pro (owner) |
+| 22                    | PUT    | `/merchants/{id}/item/reorder`           | ✅        | Member Pro (owner) |
+| **REVIEWS**           |        |                                         |          |                    |
+| 23                    | GET    | `/merchants/{id}/review`                 | Optional | All                |
+| 24                    | POST   | `/merchants/{id}/review`                 | ✅        | Any member         |
+| 25                    | PUT    | `/merchants/{id}/review`                 | ✅        | Reviewer (own)     |
+| 26                    | POST   | `/review/{review_id}/vote`              | ✅        | Any member         |
+| **FAVORITES (Save/Bookmark)** |  |                                     |          |                    |
+| 27                    | GET    | `/me/saved`                             | ✅        | Any member         |
+| 28                    | POST   | `/merchants/{id}/save`                   | ✅        | Any member         |
+| 29                    | DELETE | `/merchants/{id}/save`                   | ✅        | Any member         |
+| **LIKES (Reaction ❤️)** |      |                                         |          |                    |
+| 27a                   | POST   | `/merchants/{id}/like`                   | ✅        | Any member         |
+| 27b                   | DELETE | `/merchants/{id}/like`                   | ✅        | Any member         |
+| **INQUIRIES**         |        |                                         |          |                    |
+| 30                    | POST   | `/merchants/{id}/inquiry`                | ✅        | Any member         |
+| 31                    | GET    | `/me/inquiry`                           | ✅        | Any member         |
+| 32                    | GET    | `/merchants/{id}/inquiry`                | ✅        | Owner              |
+| 33                    | POST   | `/merchants/{id}/inquiry/{inq_id}/reply` | ✅        | Owner              |
+| 34                    | POST   | `/merchants/{id}/inquiry/{inq_id}/close` | ✅        | Owner              |
+| **CATEGORIES**        |        |                                         |          |                    |
+| 35                    | GET    | `/categories`                           | Optional | All                |
 
 ---
 
@@ -144,10 +147,10 @@ context: "directory"
 - **Auth**: Member Pro
 
 **Query Params:**
-| Param | Type | Default | Deskripsi |
-|-------|------|---------|-----------|
-| limit | int | 20 | |
-| offset | int | 0 | |
+| Param  | Type | Default | Deskripsi |
+| ------ | ---- | ------- | --------- |
+| limit  | int  | 20      |           |
+| offset | int  | 0       |           |
 
 **Response 200:**
 ```json
@@ -189,14 +192,14 @@ context: "directory"
 ```
 
 **Validasi:**
-| Field | Rule |
-|-------|------|
-| name | Required, min 3, max 200 |
-| description | Optional, max 2000 |
-| logo_url | Optional, valid URL |
-| phone | Optional, format Indonesia |
-| email | Optional, valid email |
-| website | Optional, valid URL |
+| Field       | Rule                       |
+| ----------- | -------------------------- |
+| name        | Required, min 3, max 200   |
+| description | Optional, max 2000         |
+| logo_url    | Optional, valid URL        |
+| phone       | Optional, format Indonesia |
+| email       | Optional, valid email      |
+| website     | Optional, valid URL        |
 
 **Response 201:**
 ```json
@@ -284,7 +287,7 @@ context: "directory"
 
 ### 7. Create Merchant
 
-- **POST** `/api/v1/mobile/directory/merchant`
+- **POST** `/api/v1/mobile/directory/merchants`
 - **Auth**: Member Pro
 
 **Request Body:**
@@ -296,8 +299,8 @@ context: "directory"
   "type": "retail",
   "category_ids": ["uuid-cat-retail", "uuid-cat-food"],
   "images": [
-    { "url": "https://cdn.../merchant_1.jpg", "is_primary": true, "sort_order": 1 },
-    { "url": "https://cdn.../merchant_2.jpg", "is_primary": false, "sort_order": 2 }
+    { "url": "https://cdn.../merchants_1.jpg", "is_primary": true, "sort_order": 1 },
+    { "url": "https://cdn.../merchants_2.jpg", "is_primary": false, "sort_order": 2 }
   ],
   "address": "Jl. Ahmad Yani No. 123, Jakarta Pusat",
   "latitude": -6.2088,
@@ -321,17 +324,17 @@ context: "directory"
 ```
 
 **Validasi:**
-| Field | Rule |
-|-------|------|
-| company_id | Required, must own company |
-| name | Required, min 3, max 200 |
-| description | Required, min 20, max 3000 |
-| type | Required: retail/online/service/food_beverage/beauty/other |
-| category_ids | Required, min 1, max 5, valid category_master IDs |
-| images | Min 1 (jika setting `min_images` = 1) |
-| address | Required jika type != online |
-| latitude | Required jika type != online, valid range |
-| longitude | Required jika type != online, valid range |
+| Field        | Rule                                                       |
+| ------------ | ---------------------------------------------------------- |
+| company_id   | Required, must own company                                 |
+| name         | Required, min 3, max 200                                   |
+| description  | Required, min 20, max 3000                                 |
+| type         | Required: retail/online/service/food_beverage/beauty/other |
+| category_ids | Required, min 1, max 5, valid category_master IDs          |
+| images       | Min 1 (jika setting `min_images` = 1)                      |
+| address      | Required jika type != online                               |
+| latitude     | Required jika type != online, valid range                  |
+| longitude    | Required jika type != online, valid range                  |
 
 **Response 201:**
 ```json
@@ -353,7 +356,7 @@ context: "directory"
 
 ### 8. List My Merchants
 
-- **GET** `/api/v1/mobile/directory/me/merchant`
+- **GET** `/api/v1/mobile/directory/me/merchants`
 - **Auth**: Member Pro
 
 **Query Params:** `company_id` (optional), `status`, `limit`, `offset`
@@ -374,7 +377,7 @@ context: "directory"
       "rating": 4.5,
       "review_count": 123,
       "item_count": 45,
-      "primary_image": "https://cdn.../merchant_1.jpg",
+      "primary_image": "https://cdn.../merchants_1.jpg",
       "created_at": "2026-05-30T10:00:00Z"
     }
   ],
@@ -386,7 +389,7 @@ context: "directory"
 
 ### 9. Get My Merchant (Owner Detail)
 
-- **GET** `/api/v1/mobile/directory/merchant/{merchant_id}/manage`
+- **GET** `/api/v1/mobile/directory/merchants/{merchant_id}/manage`
 - **Auth**: Member Pro (owner only)
 - **Deskripsi**: Versi lengkap dengan settings, stats, rejection_reason, dll.
 
@@ -439,11 +442,24 @@ context: "directory"
 }
 ```
 
+**Field `stats`** (dipakai untuk kartu Views / Rating / Items / Inquiries di layar kelola merchant):
+
+| Field            | Type   | Arti                                                                 |
+|------------------|--------|----------------------------------------------------------------------|
+| `item_count`     | int    | Jumlah item/produk merchant                                          |
+| `review_count`   | int    | Jumlah ulasan                                                        |
+| `rating`         | number | Rata-rata rating (0–5); `0` jika belum ada ulasan                    |
+| `favorite_count` | int    | Jumlah **like** ❤️ (digerakkan endpoint `/like` #27a/27b)            |
+| `inquiry_count`  | int    | Jumlah inquiry masuk                                                 |
+| `view_count`     | int    | Jumlah tampilan (increment 1×/user/hari saat buka detail publik #16) |
+
+> ⚠️ **Nama field wajib `view_count`** (bukan `total_views`). Mobile sempat membaca `total_views` — sudah diselaraskan ke `view_count`, tapi juga menerima `total_views` sebagai fallback. Kirim `view_count`. Semua field `stats` **wajib ada** (kirim `0` bila belum ada data) agar kartu tidak menampilkan kosong.
+
 ---
 
 ### 10. Update Merchant
 
-- **PUT** `/api/v1/mobile/directory/merchant/{merchant_id}`
+- **PUT** `/api/v1/mobile/directory/merchants/{merchant_id}`
 - **Auth**: Member Pro (owner only)
 - **Note**: Jika merchant sudah `published`, update akan set status ke `pending_approval` kembali (jika `require_approval = true`)
 
@@ -474,7 +490,7 @@ context: "directory"
 
 ### 11. Publish Merchant
 
-- **POST** `/api/v1/mobile/directory/merchant/{merchant_id}/publish`
+- **POST** `/api/v1/mobile/directory/merchants/{merchant_id}/publish`
 - **Auth**: Member Pro (owner only)
 
 **Response 200:**
@@ -504,8 +520,8 @@ context: "directory"
 
 ### 12 & 13. Archive / Unarchive Merchant
 
-- **POST** `/api/v1/mobile/directory/merchant/{merchant_id}/archive`
-- **POST** `/api/v1/mobile/directory/merchant/{merchant_id}/unarchive`
+- **POST** `/api/v1/mobile/directory/merchants/{merchant_id}/archive`
+- **POST** `/api/v1/mobile/directory/merchants/{merchant_id}/unarchive`
 - **Auth**: Member Pro (owner only)
 
 **Response 200:**
@@ -518,7 +534,7 @@ context: "directory"
 
 ### 14. Delete Merchant
 
-- **DELETE** `/api/v1/mobile/directory/merchant/{merchant_id}`
+- **DELETE** `/api/v1/mobile/directory/merchants/{merchant_id}`
 - **Auth**: Member Pro (owner only)
 - **Rule**: Hanya bisa jika belum ada reviews atau inquiries
 
@@ -533,23 +549,23 @@ context: "directory"
 
 ### 15. List Merchants (Public Directory)
 
-- **GET** `/api/v1/mobile/directory/merchant`
+- **GET** `/api/v1/mobile/directory/merchants`
 - **Auth**: Optional
 
 **Query Params:**
-| Param | Type | Deskripsi |
-|-------|------|-----------|
-| q | string | Full-text search nama/deskripsi |
-| category_id | UUID | Filter by kategori |
-| type | string | retail/online/service/food_beverage/beauty/other |
-| city | string | Filter by kota (case-insensitive) |
-| rating_min | float | Min rating (1.0–5.0) |
-| is_open_now | boolean | Filter yang sedang buka |
-| has_product | boolean | Ada item product |
-| has_service | boolean | Ada item service |
-| sort | string | `rating_desc`(default)/`newest`/`name_asc`/`most_reviewed` |
-| limit | int | Default 20, max 100 |
-| offset | int | Default 0 |
+| Param       | Type    | Deskripsi                                                  |
+| ----------- | ------- | ---------------------------------------------------------- |
+| q           | string  | Full-text search nama/deskripsi                            |
+| category_id | UUID    | Filter by kategori                                         |
+| type        | string  | retail/online/service/food_beverage/beauty/other           |
+| city        | string  | Filter by kota (case-insensitive)                          |
+| rating_min  | float   | Min rating (1.0–5.0)                                       |
+| is_open_now | boolean | Filter yang sedang buka                                    |
+| has_product | boolean | Ada item product                                           |
+| has_service | boolean | Ada item service                                           |
+| sort        | string  | `rating_desc`(default)/`newest`/`name_asc`/`most_reviewed` |
+| limit       | int     | Default 20, max 100                                        |
+| offset      | int     | Default 0                                                  |
 
 **Response 200:**
 ```json
@@ -562,7 +578,7 @@ context: "directory"
       "categories": [
         { "id": "uuid-cat-retail", "name": "Retail", "icon": "🏬" }
       ],
-      "primary_image": "https://cdn.../merchant_1.jpg",
+      "primary_image": "https://cdn.../merchants_1.jpg",
       "city": "Jakarta Pusat",
       "province": "DKI Jakarta",
       "rating": 4.5,
@@ -571,6 +587,8 @@ context: "directory"
       "is_open_now": true,
       "is_featured": false,
       "is_saved": false,  // null jika tidak login
+      "is_liked": false,  // null jika tidak login
+      "favorite_count": 234,
       "published_at": "2026-02-12T10:00:00Z"
     }
   ],
@@ -582,7 +600,7 @@ context: "directory"
 
 ### 16. Get Merchant Detail (Public)
 
-- **GET** `/api/v1/mobile/directory/merchant/{merchant_id}`
+- **GET** `/api/v1/mobile/directory/merchants/{merchant_id}`
 - **Auth**: Optional
 - **Side Effect**: Increment view count (1x per user per hari)
 
@@ -630,6 +648,7 @@ context: "directory"
     "favorite_count": 234,
     "view_count": 5420,
     "is_saved": false,
+    "is_liked": false,
     "is_featured": false,
     "allow_reviews": true,
     "allow_inquiries": true,
@@ -649,17 +668,17 @@ context: "directory"
 
 ### 17. List Merchant Items (Public)
 
-- **GET** `/api/v1/mobile/directory/merchant/{merchant_id}/item`
+- **GET** `/api/v1/mobile/directory/merchants/{merchant_id}/item`
 - **Auth**: Optional
 
 **Query Params:**
-| Param | Type | Deskripsi |
-|-------|------|-----------|
-| type | string | product/service |
+| Param  | Type   | Deskripsi             |
+| ------ | ------ | --------------------- |
+| type   | string | product/service       |
 | status | string | available/unavailable |
-| q | string | Search nama item |
-| limit | int | Default 20 |
-| offset | int | Default 0 |
+| q      | string | Search nama item      |
+| limit  | int    | Default 20            |
+| offset | int    | Default 0             |
 
 **Response 200:**
 ```json
@@ -702,7 +721,7 @@ context: "directory"
 
 ### 18. Get Item Detail (Public)
 
-- **GET** `/api/v1/mobile/directory/merchant/{merchant_id}/item/{item_id}`
+- **GET** `/api/v1/mobile/directory/merchants/{merchant_id}/item/{item_id}`
 - **Auth**: Optional
 
 **Response 200:**
@@ -734,7 +753,7 @@ context: "directory"
 
 ### 19. Create Item
 
-- **POST** `/api/v1/mobile/directory/merchant/{merchant_id}/item`
+- **POST** `/api/v1/mobile/directory/merchants/{merchant_id}/item`
 - **Auth**: Member Pro (owner only)
 
 **Request Body (Product):**
@@ -774,14 +793,14 @@ context: "directory"
 ```
 
 **Validasi:**
-| Field | Rule |
-|-------|------|
-| type | Required: product/service |
-| name | Required, min 3, max 200 |
-| price | Required jika type=product, > 0 |
-| price_min | Required jika type=service, > 0 |
+| Field     | Rule                                     |
+| --------- | ---------------------------------------- |
+| type      | Required: product/service                |
+| name      | Required, min 3, max 200                 |
+| price     | Required jika type=product, > 0          |
+| price_min | Required jika type=service, > 0          |
 | price_max | Required jika type=service, >= price_min |
-| images | Min 1, max 10 |
+| images    | Min 1, max 10                            |
 
 **Response 201:**
 ```json
@@ -795,7 +814,7 @@ context: "directory"
 
 ### 20. Update Item
 
-- **PUT** `/api/v1/mobile/directory/merchant/{merchant_id}/item/{item_id}`
+- **PUT** `/api/v1/mobile/directory/merchants/{merchant_id}/item/{item_id}`
 - **Auth**: Member Pro (owner only)
 
 **Request Body:** *(partial update)*
@@ -819,7 +838,7 @@ context: "directory"
 
 ### 21. Delete Item
 
-- **DELETE** `/api/v1/mobile/directory/merchant/{merchant_id}/item/{item_id}`
+- **DELETE** `/api/v1/mobile/directory/merchants/{merchant_id}/item/{item_id}`
 - **Auth**: Member Pro (owner only)
 
 **Response 204:** (No Content)
@@ -828,7 +847,7 @@ context: "directory"
 
 ### 22. Reorder Items
 
-- **PUT** `/api/v1/mobile/directory/merchant/{merchant_id}/item/reorder`
+- **PUT** `/api/v1/mobile/directory/merchants/{merchant_id}/item/reorder`
 - **Auth**: Member Pro (owner only)
 
 **Request Body:**
@@ -853,7 +872,7 @@ context: "directory"
 
 ### 23. List Merchant Reviews (Public)
 
-- **GET** `/api/v1/mobile/directory/merchant/{merchant_id}/review`
+- **GET** `/api/v1/mobile/directory/merchants/{merchant_id}/review`
 - **Auth**: Optional
 
 **Query Params:** `rating` (1-5 filter), `sort` (newest/most_helpful), `limit`, `offset`
@@ -895,7 +914,7 @@ context: "directory"
 
 ### 24. Create Review
 
-- **POST** `/api/v1/mobile/directory/merchant/{merchant_id}/review`
+- **POST** `/api/v1/mobile/directory/merchants/{merchant_id}/review`
 - **Auth**: Any member (tidak boleh owner sendiri)
 
 **Request Body:**
@@ -930,7 +949,7 @@ context: "directory"
 
 ### 25. Update My Review
 
-- **PUT** `/api/v1/mobile/directory/merchant/{merchant_id}/review`
+- **PUT** `/api/v1/mobile/directory/merchants/{merchant_id}/review`
 - **Auth**: Reviewer (own review only)
 
 **Request Body:** *(partial update)*
@@ -1012,7 +1031,7 @@ context: "directory"
 
 ### 28. Save Merchant
 
-- **POST** `/api/v1/mobile/directory/merchant/{merchant_id}/save`
+- **POST** `/api/v1/mobile/directory/merchants/{merchant_id}/save`
 - **Auth**: Any member
 
 **Request Body:** *(optional)*
@@ -1032,10 +1051,67 @@ context: "directory"
 
 ### 29. Unsave Merchant
 
-- **DELETE** `/api/v1/mobile/directory/merchant/{merchant_id}/save`
+- **DELETE** `/api/v1/mobile/directory/merchants/{merchant_id}/save`
 - **Auth**: Any member
 
 **Response 204:** (No Content)
+
+---
+
+## LIKES (Reaction ❤️)
+
+> **Save vs Like — dua hal berbeda:**
+> - **Save** (`/save`, #28–29) = *bookmark*. Menyimpan merchant ke daftar **"Saved"** milik user (muncul di `GET /me/saved`). Menggerakkan field `is_saved`.
+> - **Like** (`/like`, di bawah) = *reaction* ❤️ (tombol hati di merchant detail). Menggerakkan hitungan `favorite_count` (dipakai di stats) dan field per-user `is_liked`. Tidak masuk daftar "Saved".
+>
+> Keduanya idempotent: like saat sudah like → tetap 200 (tanpa dobel hitung); unlike saat belum like → tetap 204/200.
+
+### 27a. Like Merchant
+
+- **POST** `/api/v1/mobile/directory/merchants/{merchant_id}/like`
+- **Auth**: Any member (login wajib)
+- **Deskripsi**: Menandai merchant sebagai disukai oleh user saat ini. Menaikkan `favorite_count` sebanyak 1 (hanya jika sebelumnya belum like) dan set `is_liked = true`.
+
+**Request Body**: — (kosong)
+
+**Response 200:**
+```json
+{
+  "data": {
+    "merchant_id": "uuid-mch-001",
+    "is_liked": true,
+    "favorite_count": 235
+  }
+}
+```
+
+**Error Responses:**
+
+| HTTP | error_code                | Kondisi                          |
+|------|---------------------------|----------------------------------|
+| 401  | `ERR_UNAUTHORIZED`        | Belum login                      |
+| 404  | `ERR_NOT_FOUND`           | Merchant tidak ditemukan/arsip   |
+
+> Catatan: jika user sudah like sebelumnya, tetap balas **200** dengan state terkini (idempotent, `favorite_count` tidak bertambah lagi).
+
+### 27b. Unlike Merchant
+
+- **DELETE** `/api/v1/mobile/directory/merchants/{merchant_id}/like`
+- **Auth**: Any member (login wajib)
+- **Deskripsi**: Membatalkan like. Menurunkan `favorite_count` sebanyak 1 (tidak pernah di bawah 0) dan set `is_liked = false`.
+
+**Response 200:**
+```json
+{
+  "data": {
+    "merchant_id": "uuid-mch-001",
+    "is_liked": false,
+    "favorite_count": 234
+  }
+}
+```
+
+> Boleh juga balas **204 No Content**; mobile menangani keduanya (jika body ada, dipakai untuk sinkron `favorite_count`).
 
 ---
 
@@ -1043,7 +1119,7 @@ context: "directory"
 
 ### 30. Send Inquiry
 
-- **POST** `/api/v1/mobile/directory/merchant/{merchant_id}/inquiry`
+- **POST** `/api/v1/mobile/directory/merchants/{merchant_id}/inquiry`
 - **Auth**: Any member
 
 **Request Body:**
@@ -1107,7 +1183,7 @@ context: "directory"
 
 ### 32. Merchant Inquiries (Owner View)
 
-- **GET** `/api/v1/mobile/directory/merchant/{merchant_id}/inquiry`
+- **GET** `/api/v1/mobile/directory/merchants/{merchant_id}/inquiry`
 - **Auth**: Member Pro (owner only)
 
 **Query Params:** `status`, `limit`, `offset`
@@ -1135,7 +1211,7 @@ context: "directory"
 
 ### 33. Reply to Inquiry
 
-- **POST** `/api/v1/mobile/directory/merchant/{merchant_id}/inquiry/{inquiry_id}/reply`
+- **POST** `/api/v1/mobile/directory/merchants/{merchant_id}/inquiry/{inquiry_id}/reply`
 - **Auth**: Member Pro (owner only)
 
 **Request Body:**
@@ -1160,7 +1236,7 @@ context: "directory"
 
 ### 34. Close Inquiry
 
-- **POST** `/api/v1/mobile/directory/merchant/{merchant_id}/inquiry/{inquiry_id}/close`
+- **POST** `/api/v1/mobile/directory/merchants/{merchant_id}/inquiry/{inquiry_id}/close`
 - **Auth**: Member Pro (owner only)
 
 **Response 200:**
@@ -1224,4 +1300,13 @@ context: "directory"
 
 ---
 
-*API Spec Directory Module — Mobile Client v2.0. KAI App. Last updated: 2026-05-30*
+## Changelog
+
+| Versi | Tanggal    | Perubahan |
+|-------|------------|-----------|
+| 2.1   | 2026-07-21 | Tambah endpoint **Like/Unlike** merchant (`POST`/`DELETE /merchants/{id}/like`, #27a/27b) + field `is_liked` di list #15 & detail publik #16; tegaskan beda **Save** (bookmark) vs **Like** (reaction ❤️ → `favorite_count`); dokumentasikan arti tiap field `stats` dan tegaskan nama field views = **`view_count`** (bukan `total_views`) |
+| 2.0   | 2026-05-30 | Rilis awal v2 |
+
+---
+
+*API Spec Directory Module — Mobile Client v2.1. KAI App. Last updated: 2026-07-21*
