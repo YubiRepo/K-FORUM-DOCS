@@ -29,10 +29,12 @@ Request dengan Accept-Language: en
 Backend cek translation bahasa 'en'
    ├── Ada (translate_status=done) → return versi EN, is_translated=true
    └── Tidak ada → return versi original artikel, is_translated=false
-                   + available_languages = bahasa yang tersedia
+                   + available_languages = semua bahasa sistem yang bisa dipilih
 ```
 
 Field `is_translated` dan `available_languages` membantu frontend menampilkan indikator bahasa atau opsi pilih bahasa lain.
+
+> **`available_languages` = semua opsi bahasa yang BISA dipilih** (semua `system_languages` aktif dengan `is_translate_target=true`, plus bahasa asli artikel) — **bukan** hanya bahasa yang kebetulan sudah pernah diterjemahkan. Frontend bisa langsung render semua opsi ini sebagai pilihan bahasa; kalau user pilih bahasa yang belum ada terjemahannya, panggil `GET /articles/{id}/translate?language=...` (§3) untuk memicu translate on-demand.
 
 ---
 
@@ -197,7 +199,7 @@ Ambil detail lengkap satu artikel. Otomatis increment view count.
 
 ### 3. GET /articles/{article_id}/translate
 
-Minta versi artikel dalam bahasa tertentu. Jika belum ada, sistem akan men-generate (sesuai `on_demand` setting). Mengembalikan versi original jika translation masih diproses.
+Minta versi artikel dalam bahasa tertentu — **on-demand, non-batch**. Kalau translation untuk bahasa ini belum ada/belum `done`, backend langsung memanggil AI translation provider **secara sinkron di request yang sama** (bukan `SubmitBatch`/`PollBatch`, dan bukan sekadar menandai baris `pending` untuk diproses nanti) — respons `200` dengan hasil terjemahan biasanya datang langsung tanpa perlu polling.
 
 **Authentication**: Required
 
@@ -208,7 +210,13 @@ Minta versi artikel dalam bahasa tertentu. Jika belum ada, sistem akan men-gener
 **Query Parameters**:
 - `language` (required): Kode bahasa target (mis. `ko`, `en`)
 
-**Response (200 OK — sudah tersedia)**:
+**Prasyarat (News System Settings)** — endpoint ini hanya aktif kalau **keduanya** `true`:
+- `translation_enabled` — kill-switch global fitur translation.
+- `on_demand_enabled` — khusus fitur "translate on demand" dari mobile ini (terpisah dari translation manual/bulk di backoffice).
+
+Kalau salah satu `false` → `403 Forbidden` (`TRANSLATION_DISABLED` / `ON_DEMAND_TRANSLATION_DISABLED`).
+
+**Response (200 OK — sudah tersedia ATAU baru saja diterjemahkan sinkron)**:
 ```json
 {
   "data": {
@@ -222,7 +230,7 @@ Minta versi artikel dalam bahasa tertentu. Jika belum ada, sistem akan men-gener
 }
 ```
 
-**Response (202 Accepted — sedang diproses)**:
+**Response (202 Accepted — tidak ada provider yang bisa dipakai saat request ini)**:
 ```json
 {
   "data": {
@@ -239,7 +247,7 @@ Minta versi artikel dalam bahasa tertentu. Jika belum ada, sistem akan men-gener
 }
 ```
 
-> Jika `translation_enabled = false` di system settings → endpoint mengembalikan `403` dengan pesan fitur translation dinonaktifkan.
+> `202` hanya terjadi kalau tidak ada provider translation yang berhasil di-resolve (mis. provider default & fallback di News Settings sama-sama belum dikonfigurasi/registered di environment ini) atau panggilan providernya gagal (mis. error jaringan) — baris ditandai `pending` supaya tetap dipungut proses translation batch di backend pada kesempatan berikutnya, dan client boleh memanggil ulang endpoint ini nanti untuk cek status. ***Bukan*** perilaku normal kalau translation provider sudah dikonfigurasi dengan benar.
 
 ---
 

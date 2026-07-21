@@ -315,28 +315,30 @@ Reject artikel Member Pro (`pending_approval` → `rejected`).
 
 ### 10. POST /articles/{article_id}/translate
 
-Trigger generate translation manual ke bahasa tertentu (atau semua).
+Trigger generate translation ke bahasa tertentu (atau semua) — **non-batch/instan**: tiap bahasa langsung diterjemahkan sinkron di request ini juga (memanggil provider `Translate()` langsung, bukan `SubmitBatch`/`PollBatch`) kalau ada provider yang bisa dipakai saat ini.
 
-**Permission**: `edit_news`
+**Permission**: `manage_news_settings`
 
 **Method**: POST — `/api/v1/web/news/articles/{article_id}/translate`
 
 **Request Body**:
 ```json
-{ "languages": ["en", "ko"], "provider": "openai" }
+{ "languages": ["en", "ko"], "provider": "llm" }
 ```
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `languages` | `string[]` | No | Bahasa target. Kosong = semua bahasa aktif |
-| `provider` | `string` | No | `google` (default) atau `openai`. **Belum berfungsi** — diterima untuk kompatibilitas kontrak, tapi provider yang benar-benar dipakai worker masih fixed satu instance global (lihat `NEWS_RULES.md` §Provider Translate) |
+| `languages` | `string[]` | No | Bahasa target. Kosong = semua bahasa aktif (`is_translate_target`) |
+| `provider` | `string` | No | Salah satu dari `noop`/`google`/`aws`/`llm`. Override resolusi provider untuk request ini — hanya dihormati kalau `translation_allow_request_override=true` di News Settings (kalau `false`, diam-diam diabaikan, bukan error). Nilai yang bukan salah satu dari 4 enum tetap `422` |
 
 **Response (202 Accepted)**:
 ```json
-{ "message": "Translation jobs enqueued", "data": { "enqueued": ["en", "ko"] } }
+{ "message": "translation jobs enqueued", "data": { "enqueued": ["en", "ko"] } }
 ```
 
-> Bahasa yang belum pernah punya baris translation akan dibuat baru (status `pending`); bahasa yang sudah ada di-reset ke `pending` untuk diproses ulang. `translated_by` hasil akhirnya bisa `google`/`openai`/`noop` tergantung provider yang aktif di worker saat job diproses — lihat `NEWS_DB_SCHEMA.md` §Enum Values.
+> Kalau `translation_enabled=false` di News Settings → `403`.
+>
+> Per bahasa: kalau provider (dari override, atau default settings, atau fallback settings) berhasil di-resolve DAN panggilan translate-nya sukses → baris langsung `translate_status=done` di request ini juga (bukan `pending` menunggu tick worker). Kalau tidak ada provider yang bisa di-resolve, atau panggilannya gagal → fallback ke perilaku lama: baris ditandai `pending`, dipungut `TranslationRelay` di worker pada kesempatan berikutnya. Response `{enqueued: [...]}` sama persis di kedua kasus — untuk tahu status akhir tiap bahasa, `GET /articles/{article_id}` dan cek `translate_status` per translation.
 
 ---
 
