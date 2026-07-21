@@ -167,11 +167,6 @@ Pair yang dipakai mobile saat ini: `KRW/IDR`, `USD/IDR`, `USD/KRW`.
 
 > **Catatan (perbaikan 2026-07-18):** contoh lama `rate: 11801.90` untuk `KRW/IDR` salah skala ~1000× (nilai riil ±11–12 IDR per 1 KRW). Kirim rate **per 1 unit base**.
 
-> **Rekomendasi (opsional, belum wajib):** sediakan juga endpoint batch
-> `GET /exchange-rates/batch?pairs=KRW_IDR,USD_IDR,USD_KRW` yang mengembalikan
-> `data: [ {…}, {…}, {…} ]` supaya mobile cukup 1 request. Sampai tersedia,
-> mobile tetap memanggil per-pair.
-
 **Error Responses**:
 
 | HTTP | Kondisi |
@@ -179,6 +174,49 @@ Pair yang dipakai mobile saat ini: `KRW/IDR`, `USD/IDR`, `USD/KRW`.
 | 404  | Endpoint belum diimplementasi — mobile pakai fallback |
 | 400  | Pair mata uang tidak didukung |
 | 502  | Upstream exchange provider gagal |
+
+---
+
+## 3. GET /exchange-rates/batch
+
+Kurs beberapa pair sekaligus dalam **satu request** (tersedia sejak 2026-07-20). Mobile boleh migrasi dari 3× panggilan per-pair ke endpoint ini; belum wajib.
+
+**Authentication**: Optional
+
+**Method**: GET
+
+**URL**: `/api/v1/mobile/home/exchange-rates/batch`
+
+**Query Parameters**:
+
+| Parameter | Type   | Required | Default                        | Description |
+|-----------|--------|----------|---------------------------------|-------------|
+| `pairs`   | string | No       | `KRW_IDR,USD_IDR,USD_KRW`       | Daftar pair dipisah koma, tiap entri format `BASE_QUOTE` (mis. `KRW_IDR`) |
+
+**Response (200 OK)**:
+
+```json
+{
+  "status": "success",
+  "message": "OK",
+  "data": [
+    { "base_currency": "KRW", "quote_currency": "IDR", "rate": 11.94,   "change_percent": -0.71, "updated_at": "2026-07-01T08:00:00.000Z" },
+    { "base_currency": "USD", "quote_currency": "IDR", "rate": 16300.0, "change_percent": 0.12,  "updated_at": "2026-07-01T08:00:00.000Z" },
+    { "base_currency": "USD", "quote_currency": "KRW", "rate": 1365.0,  "change_percent": 0.08,  "updated_at": "2026-07-01T08:00:00.000Z" }
+  ]
+}
+```
+
+Tiap elemen `data` mengikuti field yang sama dengan `GET /exchange-rates` (lihat di atas).
+
+**Perilaku best-effort per pair**: jika satu pair gagal diambil dari upstream (pair tidak didukung, timeout, dsb.), pair tersebut **di-skip** dari array `data` — bukan menggagalkan seluruh request. Mobile perlu treat pair yang hilang dari response sebagai "gagal" untuk pair itu (fallback ke public FX API / static per pair, sama seperti skenario 404/5xx pada endpoint per-pair).
+
+**Error Responses**:
+
+| HTTP | Kondisi |
+|------|---------|
+| 404  | Endpoint belum diimplementasi — mobile pakai fallback per-pair |
+| 400  | Format `pairs` tidak valid (entri bukan `BASE_QUOTE`) |
 
 ---
 
@@ -254,6 +292,7 @@ Pair yang dipakai mobile saat ini: `KRW/IDR`, `USD/IDR`, `USD/KRW`.
 
 | Version | Date       | Notes |
 |---------|------------|-------|
+| 1.2.0   | 2026-07-20 | Implementasi endpoint `GET /exchange-rates/batch` (opsional di v1.1.0 kini tersedia); best-effort per pair, pair gagal di-skip bukan menggagalkan seluruh request |
 | 1.1.1   | 2026-07-18 | Perluas rekomendasi upstream exchange: tabel sumber + syarat historical/timeseries untuk `change_percent`; tandai `open.er-api.com` (spot-only) jangan sekadar di-proxy; tambah Frankfurter sebagai rekomendasi utama key-less |
 | 1.1.0   | 2026-07-18 | Multi-pair (KRW/IDR, USD/IDR, USD/KRW); fallback 3-tingkat exchange rate (backend → public FX API → static); perbaikan skala contoh `KRW/IDR` (per 1 unit base); rekomendasi endpoint batch |
 | 1.0.0   | 2026-07-01 | Initial spec — weather + exchange rate widgets |
