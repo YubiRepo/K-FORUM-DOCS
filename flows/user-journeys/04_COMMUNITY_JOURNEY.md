@@ -69,10 +69,10 @@ Selain browse→join dan join-request di atas, member bisa masuk komunitas lewat
 1. Pro member membuka **"Create Community"** → isi nama, deskripsi, avatar, **kategori** (wajib, dipilih dari daftar yang dikelola superadmin), **visibility** (public/private), region (opsional).
 2. Sistem cek benefit `create_community` ✅ → komunitas dibuat berstatus `active` → Pro member otomatis jadi **leader**, permission leader/moderator/member di-copy dari template default (`community_role_permissions_template`, dikelola superadmin).
 3. **Mengelola anggota:**
-   - **Undang user spesifik**: cari user terdaftar by username/nama → kirim undangan (bisa dibatalkan selama masih pending; tidak bisa mengundang user yang sudah jadi anggota atau berstatus banned).
-   - **Buat share link**: atur `requires_approval`, `expires_at`, `max_uses` opsional → dapat kode/URL untuk disebar; bisa dicabut kapan saja (`is_active=false`), bisa punya beberapa link aktif sekaligus.
+   - **Undang user spesifik**: cari user terdaftar by username/nama → kirim undangan (bisa dibatalkan selama masih pending; tidak bisa mengundang user yang sudah jadi anggota atau berstatus banned). (not yet implemented fully)
+   - **Buat share link**: atur `requires_approval`, `expires_at`, `max_uses` opsional → dapat kode/URL untuk disebar; bisa dicabut kapan saja (`is_active=false`), bisa punya beberapa link aktif sekaligus. (implemented, but button join masih belum berubah ketika user sudah join)
    - **Approve/reject join-request** komunitas private.
-   - **Promote member → moderator**: pilih anggota, assign role `moderator`, atur permission spesifik untuk komunitas ini (mis. `manage_members`, `moderate_posts`, `manage_community_announcement`, `manage_community_schedule`) via bulk-assign — permission ini **tidak otomatis berlaku di komunitas lain** milik moderator yang sama.
+   - **Promote member → moderator**: pilih anggota, assign role `moderator`, atur permission spesifik untuk komunitas ini (mis. `manage_members`, `moderate_posts`, `manage_community_announcement`, `manage_community_schedule`) via bulk-assign — permission ini **tidak otomatis berlaku di komunitas lain** milik moderator yang sama. ()
    - **Kick/ban** anggota yang melanggar aturan.
 4. **Customize permission per role**: leader bisa membuka Roles & Permissions komunitasnya, mencabut/menambah permission untuk role `moderator` (mis. cabut `delete_content` dari moderator) — perubahan berlaku langsung.
 5. **Moderasi konten**: hapus post/komentar yang melanggar (butuh `moderate_posts`/`delete_content`, default dimiliki leader).
@@ -118,3 +118,12 @@ Perlu ditegaskan: **leader dan moderator adalah role lokal komunitas**, diberika
 - **Share link dengan `requires_approval=true`**: `use_count` naik saat **join-request dibuat**, bukan saat di-approve — jadi kuota link membatasi jumlah pendaftar, bukan jumlah yang akhirnya diterima.
 - **Satu undangan pending per pasangan (komunitas, invitee)** — mengundang ulang saat masih ada undangan pending akan menggantikan/menyegarkan undangan lama, bukan menumpuk duplikat.
 - **Komunitas berbayar/berbadge/berregion** tetap mengikuti aturan visibility yang sama — region cuma label & filter, tidak membatasi siapa yang bisa menemukan atau join komunitas tersebut.
+
+## Note
+- upload avatar komunitas beluma da presign url / atau mungkin mobile salah endpoint, sehingga gagal upload avatar komunitas
+- invite via account name masih belum sempurna, hasil invite tidak muncul di list invitation, padahal sudah dikirimkan. bahkan dimana list invitatiionnya, 
+- invite via link, ketika sudah join, tombol join masih muncul, seharusnya hilang, atau mungkin langsng diarahkan ke halaman komunitas
+- link share post masih belum sesuai domain url yg di pakai.
+- moderator tidak bisa menghapus post, padahal sudah ada permission manage_content.
+- leader comunity dapet expose semua comunity di backoffice, seharusnya hanya comunity yang dia pimpin saja. ( di sini juga belum lebih spesifik sebagai halaman manage comunity untuk si leader, dan moderator,)
+- sudah tidak jadi leader, tapi masih punya session sebagai leader di eks comunity yang dia pimpin, seharusnya di logout otomatis. memang setelah sekian lama dia hilang, krn redis kmngkinan ( gapapa dulu).

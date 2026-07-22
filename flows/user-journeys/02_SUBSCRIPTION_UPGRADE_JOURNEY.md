@@ -17,7 +17,7 @@ Setiap member baru otomatis berada di plan **Standard** (gratis diakses langsung
 | Approve/reject upgrade orang lain | ❌ | ❌ | Hanya Superadmin |
 | Ubah harga plan / benefit master | ❌ | ❌ | Hanya Superadmin (benefit assignment) & Usergod (benefit key) |
 
-## Journey 1: Signup — Otomatis Jadi Standard — 🅢 — 📱 Mobile
+## Journey 1: Signup — Otomatis Jadi Standard — 🅢 — 📱 Mobile (✅ Done 22 Juli 2026)
 
 1. User mengisi form registrasi (email, password, nama, dll) → submit.
 2. Verifikasi email (OTP/link).
@@ -31,7 +31,8 @@ Setiap member baru otomatis berada di plan **Standard** (gratis diakses langsung
 
 **Selesai:** Member berstatus Standard aktif dan siap memakai fitur inti (baca konten, join komunitas, dll).
 
-## Journey 2: Member Request Upgrade ke Pro — 🅢→🅟 — 📱 Mobile
+## Journey 2: Member Request Upgrade ke Pro — 🅢→🅟 — 📱 Mobile (✅ Done 22 Juli 2026)
+### Note: Request dipindah hanya bisa dilakukan di backoffiice.
 
 1. Trigger: Member menekan "Upgrade to Pro" di halaman profil/pricing.
 2. **Konfirmasi upgrade** — layar menampilkan perbandingan plan (Standard Rp49rb vs Pro Rp129rb, selisih Rp80rb) beserta daftar benefit yang akan terbuka (post news, create community, create store, create event, view analytics, priority support). [Continue] / [Cancel].

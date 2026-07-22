@@ -109,3 +109,10 @@ Modul Q&A / FAQ punya dua jenis konten. **FAQ** adalah konten resmi yang dikuras
 - **Accepted answer bisa lebih dari satu** per pertanyaan publik — bukan single "best answer" seperti forum Q&A pada umumnya.
 - **Assignment tidak eksklusif untuk pertanyaan publik** — expert yang ditugaskan tetap harus bersaing/berdampingan dengan jawaban member lain yang punya benefit `answer_qna`; assignment hanya menandai siapa yang "bertanggung jawab", bukan menutup pertanyaan dari kontribusi member lain.
 - **Guest (belum login) sama sekali tidak bisa mengakses modul ini** — baca FAQ maupun mengajukan pertanyaan sama-sama mensyaratkan login terlebih dahulu.
+
+
+## Note
+- saat pertanyaan private mengandung attachment, dari backoffice admin tidak bisa melihat attachment tersebut, hanya bisa melihat pertanyaan dan jawaban saja. Attachment hanya bisa diakses oleh penanya dan expert/admin yang ditugaskan.
+- admin failed to assign pertanyaan private ke expert, route not found.
+- saat liat pertanyaan public di mobile , endpoint error answer query failed.
+- lifecycle pertanyaan public/private masih belum jelas.

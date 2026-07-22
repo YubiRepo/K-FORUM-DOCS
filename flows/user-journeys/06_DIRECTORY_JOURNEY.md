@@ -124,3 +124,15 @@ Directory adalah katalog bisnis komunitas Korea-Indonesia. Semua member (Standar
 - **Like bersifat idempotent by design** — like/unlike dua kali berturut-turut tidak dianggap error (409 boleh diabaikan FE), selaras dengan pola optimistic-update di mobile.
 - **Reviewer tidak bisa review merchant sendiri** — berlaku juga untuk Member Pro yang jadi owner merchant tersebut.
 - **Data retention:** review bersifat permanen (tidak auto-delete); merchant yang dihapus meng-cascade delete item & favorite, tapi review dan inquiry tetap dipertahankan di database untuk keperluan audit.
+
+## Note
+- belum implement like merchant
+- inquiry masih ada bug subject min dan message min chars
+- create merchant gambar yang di upload tidak muncul di preload confirmation, dan yng di kirim ke backend atau s3 malah placeholder image.
+- create item gambar yang di upload tidak muncul di preload confirmation, dan yng di kirim ke backend atau s3 malah placeholder image.
+- aproved merchant request belum mengirim notifikasi ke owner, tapi merchant sudah muncul di listing publik.
+- tidak ada detail item di halaman merchant, hanya menampilkan list item saja.
+- status closed and open merchant belum sesuai jam operasional yang di set.
+- create item, min dan max price untuk service belum sesuai validasi, belum bisa di simpan juga, nilai yang di tampilkan di list masih belum muncul.
+- jika inquiry sudah di reply, status inquiry masih tetap open, seharusnya berubah menjadi replied. dimana liat reply nya dari sisi penanya juga belum ada, seharusnya bisa liat reply dari merchant.
+- di halaman backoffice, belum ada halaman untuk manage company, merchant, item, review, inquiry miliknya sendiri.

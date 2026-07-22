@@ -365,3 +365,32 @@ Mengubah password untuk pengguna yang sedang aktif/login. Pengguna harus memasuk
   }
   ```
 
+---
+
+### 12. Set Password (Set Password Pertama Kali — Akun Google/Apple)
+Menetapkan password lokal untuk **pertama kali** pada akun yang login via Google/Apple dan belum pernah punya password (`has_password == false` pada `User Object`, lihat §1). Berbeda dengan endpoint **Change Password** (#11) — endpoint ini **tidak meminta `old_password`**, karena memang belum ada password untuk diverifikasi.
+
+- **URL**: `POST /api/v1/mobile/auth/set-password`
+- **Autentikasi**: Ya (`Bearer <access_token>`)
+- **Request Body**:
+  ```json
+  {
+    "new_password": "newpassword123"
+  }
+  ```
+- **Response (Success 200)**:
+  ```json
+  {
+    "message": "password berhasil ditambahkan"
+  }
+  ```
+- **Response (Error 409)** — akun ini **sudah** punya password lokal aktif; harus pakai endpoint Change Password (#11), bukan endpoint ini:
+  ```json
+  {
+    "message": "DOMAIN_USER_ALREADY_HAS_LOCAL_PASSWORD"
+  }
+  ```
+
+> [!NOTE]
+> Ini juga jadi prasyarat untuk unlink Google (lihat `API_SPEC_USER_SETTINGS.md` §8) — akun social-login-only tidak bisa unlink Google sebelum set password lewat endpoint ini.
+

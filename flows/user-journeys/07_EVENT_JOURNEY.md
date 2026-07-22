@@ -10,23 +10,23 @@ Event bisa berupa Offline, Online, atau Hybrid, dan melalui alur publikasi yang 
 
 ## Batasan Standard vs Pro di Domain Ini
 
-| Aksi | Standard | Pro | Catatan |
-|---|:---:|:---:|---|
-| Lihat daftar & detail event | ✅ | ✅ | Semua event published, global |
-| Filter berdasarkan tipe (offline/online/hybrid) & cari lokasi venue | ✅ | ✅ | Hanya mempersempit pencarian, bukan pembatas akses |
-| Bookmark event | ✅ | ✅ | |
-| Tambah ke jadwal pribadi (in-app) + reminder | ✅ | ✅ | |
-| Export ke kalender eksternal (.ics / deep link) | ✅ | ✅ | |
-| Bagikan event (share) | ✅ | ✅ | |
-| Ikuti/daftar event via link eksternal organizer | ✅ | ✅ | Bukan fitur RSVP internal — sekadar link registrasi yang dicantumkan organizer |
-| Isi feedback setelah event berlangsung | ✅ | ✅ | Kecuali untuk event yang ia organisir sendiri |
-| Buat event baru | ❌ | ✅ | Standard melihat modal "Upgrade ke Pro untuk membuat event" |
-| Edit event milik sendiri | ❌ | ✅ | Hanya saat status draft atau rejected |
-| Hapus event milik sendiri | ❌ | ✅ | Hanya saat status draft atau rejected |
-| Batalkan event milik sendiri | ❌ | ✅ | Bisa kapan saja sebelum/sesudah tayang |
-| Lihat feedback & ringkasan statistik event miliknya | ❌ | ✅ | Hanya untuk event yang ia organisir |
+| Aksi                                                                | Standard | Pro | Catatan                                                                        |
+| ------------------------------------------------------------------- | :------: | :-: | ------------------------------------------------------------------------------ |
+| Lihat daftar & detail event                                         |    ✅    | ✅  | Semua event published, global                                                  |
+| Filter berdasarkan tipe (offline/online/hybrid) & cari lokasi venue |    ✅    | ✅  | Hanya mempersempit pencarian, bukan pembatas akses                             |
+| Bookmark event                                                      |    ✅    | ✅  |                                                                                |
+| Tambah ke jadwal pribadi (in-app) + reminder                        |    ✅    | ✅  |                                                                                |
+| Export ke kalender eksternal (.ics / deep link)                     |    ✅    | ✅  |                                                                                |
+| Bagikan event (share)                                               |    ✅    | ✅  |                                                                                |
+| Ikuti/daftar event via link eksternal organizer                     |    ✅    | ✅  | Bukan fitur RSVP internal — sekadar link registrasi yang dicantumkan organizer |
+| Isi feedback setelah event berlangsung                              |    ✅    | ✅  | Kecuali untuk event yang ia organisir sendiri                                  |
+| Buat event baru                                                     |    ❌    | ✅  | Standard melihat modal "Upgrade ke Pro untuk membuat event"                    |
+| Edit event milik sendiri                                            |    ❌    | ✅  | Hanya saat status draft atau rejected                                          |
+| Hapus event milik sendiri                                           |    ❌    | ✅  | Hanya saat status draft atau rejected                                          |
+| Batalkan event milik sendiri                                        |    ❌    | ✅  | Bisa kapan saja sebelum/sesudah tayang                                         |
+| Lihat feedback & ringkasan statistik event miliknya                 |    ❌    | ✅  | Hanya untuk event yang ia organisir                                            |
 
-## Journey 1: Member Menghadiri Event — 🅢🅟 — 📱 Mobile
+## Journey 1: Member Menghadiri Event — 🅢🅟 — 📱 Mobile (✅ Done tanggal : 22 Juli 2026)
 
 1. **Browse & filter** — Member membuka menu Events, melihat listing event global. Bisa memfilter berdasarkan tipe (Offline/Online/Hybrid) atau mencari nama kota/area di field venue untuk mempersempit pilihan.
 2. **Lihat detail event** — Tap salah satu event untuk melihat judul, deskripsi, foto venue, kategori, tanggal & jam, info venue (nama+alamat untuk offline, nama platform+link untuk online, keduanya untuk hybrid), dan link pendaftaran eksternal jika organizer mencantumkannya.
@@ -56,7 +56,7 @@ Event bisa berupa Offline, Online, atau Hybrid, dan melalui alur publikasi yang 
 - **Duplikasi submit** — Satu member hanya bisa mengirim satu feedback per event; percobaan submit kedua kali akan ditolak (harus edit feedback yang sudah ada).
 - **Feedback dihapus admin** — Kalau organizer/Superadmin menghapus feedback member (moderasi), feedback tersebut tidak bisa dikembalikan oleh member.
 
-## Journey 2: Pro Member Membuat & Mengelola Event — 🅟 — 📱 Mobile
+## Journey 2: Pro Member Membuat & Mengelola Event — 🅟 — 📱 Mobile (✅ Done tanggal : 22 Juli 2026)
 
 1. **Mulai buat event** — Pro member membuka menu Events, tap "Buat Event".
 2. **Isi detail** — Pilih tipe (Offline/Online/Hybrid), isi judul, deskripsi, kategori, upload foto venue (bisa lebih dari satu, diunggah terpisah sebelum submit), isi info venue sesuai tipe (nama venue+alamat untuk offline; nama platform+link untuk online; keduanya untuk hybrid — field venue adalah string bebas, tidak terikat data koordinat/maps), atur tanggal & jam, dan opsional menambahkan link pendaftaran eksternal (mis. Eventbrite/Zoom).
@@ -80,22 +80,26 @@ Event bisa berupa Offline, Online, atau Hybrid, dan melalui alur publikasi yang 
 ## Keterlibatan Admin — 💻 Web/Backoffice
 
 **Superadmin — Approval event (jika mode manual approval aktif):**
+
 1. Menerima notifikasi saat Pro member submit event baru.
 2. Membuka detail event di antrian review.
 3. **Approve** → event berubah jadi Tayang, organizer dapat notifikasi.
 4. **Reject** → mengisi alasan penolakan, event dikembalikan ke organizer (bisa diedit & disubmit ulang), organizer dapat notifikasi beserta alasan.
 
 **Superadmin — Kelola event tanpa batasan status:**
+
 - Bisa membuat event langsung dari backoffice — langsung berstatus Tayang, tanpa approval.
 - Bisa mengedit event **apapun**, kapan saja, tanpa terikat batasan status yang berlaku untuk organizer di mobile.
 - Bisa menghapus event apapun secara permanen dari backoffice.
 - Bisa membatalkan event siapapun.
 
 **Superadmin — Moderasi feedback:**
+
 - Bisa melihat semua feedback dari event manapun (termasuk identitas pengisi anonim — meski poin ini tidak dijabarkan eksplisit di `EVENT_RULES.md`, hanya disebutkan Superadmin bisa lihat "semua feedback, event manapun" untuk monitoring & moderasi; perlu konfirmasi eksplisit ke sumber lain jika detail identitas-anonim-ke-superadmin perlu dipastikan).
 - Bisa menghapus feedback apapun (hard delete, permanen) — misalnya karena pelanggaran atau spam.
 
 **Superadmin — Pengaturan platform terkait event:**
+
 - Menentukan mode publikasi: auto-publish atau perlu persetujuan.
 - Mengatur window waktu submit feedback (default 30 hari).
 

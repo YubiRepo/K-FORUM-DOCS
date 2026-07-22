@@ -179,3 +179,5 @@ Alur ini dipicu Admin Region/Superadmin mengundang lewat email (lihat Keterlibat
 - ketika kirim undangn masuk region, email tidak terkirim. tapi masuk info undangan di akun terkait.
 - mobile: list regions double untuk region dirinya sendiri
 - semua template email (OTP, undangan, reset password) masih pakai template yang seragam, belum disesuaikan dengan reason/region masing-masing. ini masih wajar karena alur email belum diimplementasikan sepenuhnya.
+- account yang dihapus (soft-delete) belum ada implementasi cancel delete,
+- ~~account yang login via google belum ada implementasi set password local.~~ **Sudah diimplementasikan** (2026-07-22): endpoint `POST /api/v1/{web,mobile}/auth/set-password` (lihat `API_SPEC_AUTH.md` §12) + UI backoffice di halaman Profile > Password. Endpoint mobile app-side sudah tersedia di backend; UI Flutter app belum (app repo di luar cakupan sesi ini).

@@ -26,7 +26,7 @@ News **tidak scoped secara visibility** — semua artikel published bisa dilihat
 | Publish langsung tanpa approval | ❌ | ❌ | Pro tetap selalu lewat `pending_approval` — tidak ada auto-publish untuk member |
 | Edit artikel sendiri yang sudah `published` | ❌ | ❌ | Tidak tercantum sebagai hak Member Pro di `NEWS_RULES.md` — edit published hanya hak Editor/admin |
 
-## Journey 1: Member Membaca & Berinteraksi dengan News — 🅢🅟 — 📱 Mobile
+## Journey 1: Member Membaca & Berinteraksi dengan News — 🅢🅟 — 📱 Mobile (✅ Done 22 Juli 2026)
 
 1. **Entry point**: member membuka tab News di aplikasi → melihat listing artikel `published`, urut terbaru, dengan artikel `is_featured` di-pin/disorot di bagian atas.
 2. **Filter/browse** (opsional): filter berdasarkan kategori (Politik, Ekonomi, Olahraga, dll — dikelola Superadmin), News Scope (Berita Indonesia / Berita Korea / Berita Korea di Indonesia), atau label asal (KAI Pusat / KAI [Region]). Filter ini murni UI, tidak membatasi artikel mana yang boleh dilihat.
@@ -53,7 +53,7 @@ News **tidak scoped secara visibility** — semua artikel published bisa dilihat
 
 > Catatan: `NEWS_RULES.md` & `NEWS_MEDIA_FLOWS.md` tidak mendetailkan copy/desain untuk empty state (mis. "belum ada artikel di kategori ini") atau error state jaringan spesifik pada listing/detail — bagian ini tidak ditulis lebih detail karena tidak ada dasar dari sumber dokumen.
 
-## Journey 2: Pro Member Posting News — 🅟 — 📱 Mobile
+## Journey 2: Pro Member Posting News — 🅟 — 📱 Mobile ( Not implemented )
 
 **Prasyarat**: benefit `post_news` harus aktif pada plan Pro member (dikonfigurasi Superadmin lewat Plan Benefits — bukan otomatis menyala hanya karena upgrade ke Pro). Jika benefit tidak aktif, entry point "Tulis Artikel" tidak muncul di aplikasi meski member sudah Pro.
 
