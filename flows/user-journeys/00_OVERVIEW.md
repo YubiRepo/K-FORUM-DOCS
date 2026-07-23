@@ -97,3 +97,15 @@ Setiap file journey mengikuti struktur yang sama:
 6. **Di luar cakupan Standard & Pro** — fitur yang memang bukan hak member sama sekali (baik Standard maupun Pro), ditulis eksplisit beserta alasannya.
 
 Tujuannya: memastikan tidak ada gap pengalaman — dari member baru buka aplikasi pertama kali, sampai berhasil menuntaskan aksi spesifik di tiap domain.
+
+---
+
+## Lihat Juga: Journey Superadmin (Backoffice)
+
+Dokumen di atas fokus ke pengalaman **member**, dengan bagian admin hanya ditulis sebagai "Keterlibatan Admin" secukupnya. Untuk journey lengkap dari sisi **Superadmin** mengelola satu domain di backoffice (menu apa saja, tombol apa saja, alur kerja sehari-hari), lihat folder terpisah [`flows/superadmin/`](../superadmin/):
+
+| Domain | File |
+|---|---|
+| News | [NEWS_JOURNEY.md](../superadmin/NEWS_JOURNEY.md) |
+
+Folder ini akan bertambah seiring domain lain didokumentasikan dari sisi Superadmin.
