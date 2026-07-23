@@ -2,13 +2,14 @@
 
 - **Modul**: Region & Onboarding — undangan region, list region (mobile), email transaksional
 - **Severity**: 🟠 Sedang-Tinggi — bukan blocker fungsional (in-app tetap jalan), tapi UX undangan & list region rusak, dan copy email reset password berpotensi bikin user bingung/curiga (dianggap phishing)
-- **Status**: 🔴 Open — 3 issue di dokumen ini, root cause sudah ditemukan by code review, belum ada fix
+- **Status**: 🟡 Sebagian selesai — **k-forum-api: ✅ DONE (22 Jul 2026)** untuk Issue 1, 2b, 3. Issue 2a (root cause utama list dobel, di sisi `k_forum` mobile) **belum dikerjakan** — menyusul.
 - **Ditemukan**: 22 Jul 2026, saat review user journey `01_ONBOARDING_ACCOUNT_JOURNEY.md`
 - **Pelapor**: review manual (dev), dikonfirmasi via code review langsung (bukan cuma reproduksi runtime)
+- **Fix diverifikasi**: `go build ./...` bersih, `go test ./...` seluruh repo tanpa FAIL (termasuk `TestMobileRegion_*`, `TestWebRegion_*`, `TestMobileAuth_ForgotPassword_*`).
 
 ---
 
-## Issue 1 — Email undangan region tidak pernah terkirim
+## Issue 1 — Email undangan region tidak pernah terkirim — ✅ k-forum-api DONE
 
 - **Repo**: `k-forum-api` (backend only, tidak ada yang perlu diubah di mobile/backoffice)
 - **Endpoint terkait**: `POST /api/v1/web/regions/:region_id/invite` (dan `resend`)
@@ -34,26 +35,29 @@ Ada 2 jalur yang independen:
 - Member yang diundang via email tidak akan pernah tahu ada undangan kecuali mereka kebetulan membuka app dan cek notifikasi/list undangan sendiri.
 - Fitur "resend invitation" di backoffice terlihat berhasil (200 OK) tapi sama-sama tidak mengirim apa-apa — false positive bagi admin yang menekan resend.
 
-### Yang diminta ke backend (k-forum-api)
+### Yang diminta ke backend (k-forum-api) — ✅ DONE (22 Jul 2026)
 
-1. Tambah handler `HandleRegionInvitationEmailRequested` di `internal/interfaces/mq/handler/region_handler.go`, isinya panggil `emailSender.SendRegionInvitation(...)` dengan data dari payload `regionevent.InvitationEmailRequested`.
-2. Register di `internal/interfaces/mq/router/router.go`: `r.Register(regionevent.RoutingRegionInvitationEmailRequested, h.HandleRegionInvitationEmailRequested)`.
-3. Daftarkan queue-nya juga di `cmd/worker/main.go` (pola persis seperti baris `{regionevent.QueueRegionJoinApproved, regionevent.RoutingRegionJoinApproved}` di baris 416).
-4. Pastikan payload event `InvitationEmailRequested` (di `internal/domain/region/event/events.go`) sudah bawa semua data yang dibutuhkan template email (region name — lihat Issue 3, bukan cuma region ID).
+1. Tambah handler `HandleRegionInvitationEmailRequested` di `internal/interfaces/mq/handler/region_handler.go`, isinya panggil `emailSender.SendRegionInvitation(...)` dengan data dari payload `regionevent.InvitationEmailRequested`. ✅
+2. Register di `internal/interfaces/mq/router/router.go`: `r.Register(regionevent.RoutingRegionInvitationEmailRequested, h.HandleRegionInvitationEmailRequested)`. ✅
+3. Daftarkan queue-nya juga di `cmd/worker/main.go` (pola persis seperti baris `{regionevent.QueueRegionJoinApproved, regionevent.RoutingRegionJoinApproved}` di baris 416). ✅
+4. Pastikan payload event `InvitationEmailRequested` (di `internal/domain/region/event/events.go`) sudah bawa semua data yang dibutuhkan template email (region name — lihat Issue 3, bukan cuma region ID). ✅ — field `RegionName` ditambahkan, diisi di `invite_members.go` (region sudah di-fetch untuk validasi, tinggal dipakai) dan `resend_invitation.go` (perlu tambah `regionRepo` sebagai dependency baru).
+
+`MQHandler` sekarang juga menerima `emailSender port.EmailSender` sebagai dependency baru (dulu cuma `dispatcher` untuk in-app/push) — diteruskan dari `cmd/worker/main.go` yang sudah punya instance `emailSender`.
 
 ### Kriteria selesai (acceptance)
 
-- [ ] Undang member baru → email diterima di inbox (verifiable di environment dengan SMTP aktif, atau log noop sender menunjukkan `SendRegionInvitation` terpanggil).
-- [ ] Tombol "resend invitation" di backoffice benar-benar mengirim ulang email, bukan cuma 200 OK kosong.
-- [ ] Log worker menunjukkan queue `region.invitation.email.requested` terkonsumsi (tidak menumpuk di outbox).
+- [x] Kode terverifikasi via `go build`/`go test` (unit & handler test) — belum diverifikasi end-to-end pakai worker + RabbitMQ + SMTP asli berjalan (di luar cakupan test otomatis repo ini). Rekomendasi: cek manual di staging sebelum tutup issue penuh.
+- [ ] Undang member baru → email diterima di inbox (perlu verifikasi manual di environment dengan SMTP aktif).
+- [ ] Tombol "resend invitation" di backoffice benar-benar mengirim ulang email (perlu verifikasi manual).
+- [ ] Log worker menunjukkan queue `region.invitation.email.requested` terkonsumsi (perlu verifikasi manual — jalankan `cmd/worker` dan cek log).
 
 ---
 
-## Issue 2 — List region di mobile tampil dobel untuk region milik sendiri
+## Issue 2 — List region di mobile tampil dobel untuk region milik sendiri — 🟡 sebagian (2b DONE, 2a belum)
 
 Ada **2 root cause independen** yang berkontribusi ke bug yang sama secara visual. Keduanya perlu diperbaiki.
 
-### 2a. Mobile (`k_forum`) — penyebab utama, selalu terjadi
+### 2a. Mobile (`k_forum`) — penyebab utama, selalu terjadi — ❌ belum dikerjakan (di luar cakupan sesi ini)
 
 - **Repo**: `k_forum` (Flutter app)
 - **File**: `lib/features/region/presentation/screens/regions_browse_screen.dart`
@@ -67,7 +71,7 @@ Ada **2 root cause independen** yang berkontribusi ke bug yang sama secara visua
 **Yang diminta ke mobile (k_forum)**:
 1. Di `_load()` dan `_loadMore()`, exclude region dengan `id == _myRegion?.id` dari `_regions` sebelum `setState`. Cukup satu baris filter setelah assignment `_regions = page.items;` (baris ~97) dan di bagian merge `fresh` (baris ~118-121).
 
-### 2b. Backend (`k-forum-api`) — edge case tambahan, muncul kalau user pernah `rejected` lalu request lagi
+### 2b. Backend (`k-forum-api`) — edge case tambahan, muncul kalau user pernah `rejected` lalu request lagi — ✅ DONE
 
 - **Repo**: `k-forum-api`
 - **File**: `internal/infrastructure/persistence/postgres_region_query.go`, fungsi `ListRegionsForMobile` (baris ~141-161)
@@ -97,19 +101,19 @@ if existing != nil {
 
 Karena `LEFT JOIN my_m` tidak difilter status dan `GROUP BY` menyertakan `your_status`/`your_role`, satu region menghasilkan **2 row di response API itu sendiri** untuk user yang pernah ditolak lalu join lagi.
 
-**Yang diminta ke backend (k-forum-api)**:
-1. Ubah join di `ListRegionsForMobile` supaya hanya ambil membership row **terbaru** per `(user_id, region_id)`, misal via `LEFT JOIN LATERAL (... ORDER BY created_at DESC LIMIT 1) my_m ON true`, bukan join biasa ke semua row historis.
-2. (Opsional, defense-in-depth) Di `RequestJoinRegionUseCase`, hapus/supersede row `rejected` lama sebelum membuat row baru saat user request join ulang — supaya tabel `region_memberships` tidak menumpuk row basi per user per region.
+**Yang diminta ke backend (k-forum-api)** — ✅ DONE (22 Jul 2026):
+1. Ubah join di `ListRegionsForMobile` supaya hanya ambil membership row **terbaru** per `(user_id, region_id)`, misal via `LEFT JOIN LATERAL (... ORDER BY created_at DESC LIMIT 1) my_m ON true`, bukan join biasa ke semua row historis. ✅
+2. (Opsional, defense-in-depth) Di `RequestJoinRegionUseCase`, hapus/supersede row `rejected` lama sebelum membuat row baru saat user request join ulang — supaya tabel `region_memberships` tidak menumpuk row basi per user per region. ✅ — dikerjakan juga, bukan cuma opsi.
 
 ### Kriteria selesai (acceptance)
 
-- [ ] User dengan 1 region aktif, tanpa histori rejected: region itu tampil **1x** di layar Browse Region (bukan di card atas + grid bawah).
-- [ ] User yang pernah `rejected` di region X lalu join lagi (approved/pending): `GET /mobile/regions` hanya balikin **1 row** untuk region X.
-- [ ] Test regresi: user tanpa region sama sekali → tidak ada card "region saya", grid tampil normal tanpa row dobel.
+- [ ] **[2a — belum, butuh fix di `k_forum`]** User dengan 1 region aktif, tanpa histori rejected: region itu tampil **1x** di layar Browse Region (bukan di card atas + grid bawah). Root cause ini ada di mobile (`communities_discover_view`-setara utk region, tidak exclude `_myRegion.id`), belum disentuh sesi ini.
+- [x] **[2b — DONE]** User yang pernah `rejected` di region X lalu join lagi (approved/pending): `GET /mobile/regions` sekarang hanya balikin **1 row** untuk region X (diverifikasi via `go test ./...` — `TestMobileRegion_ListRegions_Authenticated` & suite region lain tetap hijau; skenario rejected→rejoin belum punya test case khusus, disarankan ditambahkan).
+- [ ] Test regresi: user tanpa region sama sekali → tidak ada card "region saya", grid tampil normal tanpa row dobel. (Perlu verifikasi di sisi mobile — belum dicek sesi ini.)
 
 ---
 
-## Issue 3 — Template email OTP/undangan/reset password seragam & kurang informatif
+## Issue 3 — Template email OTP/undangan/reset password seragam & kurang informatif — ✅ k-forum-api DONE
 
 - **Repo**: `k-forum-api` (tidak ada yang perlu diubah di mobile/backoffice)
 - **File**: `internal/app/port/email_sender.go`, `internal/infrastructure/external/smtp/email_sender.go`, `internal/app/usecase/auth/forgot_password.go:89`
@@ -135,15 +139,15 @@ Ini **lebih dari sekadar "belum dipersonalisasi"** — salah satu kasusnya adala
 
 ### Yang diminta ke backend (k-forum-api)
 
-1. Tambah method baru di `EmailSender` interface khusus reset password (misal `SendPasswordResetOTP(toEmail, username, otp string) error`), dengan body yang menyebut "reset password", bukan "registrasi". Update `forgot_password.go` untuk memanggil method baru ini, bukan `SendOTP`.
-2. Ubah signature `SendRegionInvitation` untuk menerima `regionName` (bukan cuma `regionID`), dan pastikan usecase pemanggil (setelah Issue 1 diperbaiki) mengambil nama region sebelum publish event, supaya field ini tersedia di payload.
-3. (Nice to have, tidak blocking) Rapikan template supaya ada minimal subject/signature yang konsisten dengan branding KAI App, bukan "Tim k-forum-api".
+1. Tambah method baru di `EmailSender` interface khusus reset password (misal `SendPasswordResetOTP(toEmail, username, otp string) error`), dengan body yang menyebut "reset password", bukan "registrasi". Update `forgot_password.go` untuk memanggil method baru ini, bukan `SendOTP`. ✅ DONE — subject baru "Kode Reset Password Anda", body menyebut "permintaan reset password", bukan registrasi.
+2. Ubah signature `SendRegionInvitation` untuk menerima `regionName` (bukan cuma `regionID`), dan pastikan usecase pemanggil (setelah Issue 1 diperbaiki) mengambil nama region sebelum publish event, supaya field ini tersedia di payload. ✅ DONE.
+3. (Nice to have, tidak blocking) Rapikan template supaya ada minimal subject/signature yang konsisten dengan branding KAI App, bukan "Tim k-forum-api". ⏭️ belum dikerjakan — di luar cakupan sesi ini, tetap "Tim k-forum-api" sebagai signature.
 
 ### Kriteria selesai (acceptance)
 
-- [ ] Email reset password tidak lagi menyebut kata "registrasi"/"registration".
-- [ ] Email undangan region menampilkan nama region yang manusiawi, bukan UUID.
-- [ ] `EmailSender` punya method terpisah untuk OTP-registrasi vs OTP-reset-password (boleh share helper internal, tapi body/subject harus beda).
+- [x] Email reset password tidak lagi menyebut kata "registrasi"/"registration" — diverifikasi via `TestMobileAuth_ForgotPassword_ExistingEmail` & `TestMobileAuth_Login_ResetPasswordUnlocksAccount` (log noop sender menunjukkan `SendPasswordResetOTP` terpanggil, bukan `SendOTP`).
+- [x] Email undangan region menampilkan nama region yang manusiawi, bukan UUID — subject & body sekarang pakai `regionName` (fallback "sebuah region" kalau kosong).
+- [x] `EmailSender` punya method terpisah untuk OTP-registrasi vs OTP-reset-password (boleh share helper internal, tapi body/subject harus beda) — `SendOTP` dan `SendPasswordResetOTP` sekarang dua method terpisah di interface & kedua implementasi (`SMTPEmailSender`, `NoopEmailSender`).
 
 ---
 
